@@ -339,9 +339,11 @@ const JobExecutionModalComponent = ({
             <Play className="w-5 h-5 text-primary" />
             Executar Automação
           </DialogTitle>
-          <DialogDescription>
-            Confirme os detalhes antes de executar a automação
-          </DialogDescription>
+{!executionResult && (
+            <DialogDescription>
+              Confirme os detalhes antes de executar a automação
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         <div className="space-y-6">
@@ -349,7 +351,7 @@ const JobExecutionModalComponent = ({
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold text-lg mb-2">{jobTemplate.name}</h3>
-              {jobTemplate.description && (
+              {!executionResult && jobTemplate.description && (
                 <p className="text-sm text-muted-foreground">
                   {jobTemplate.description}
                 </p>
@@ -421,21 +423,23 @@ const JobExecutionModalComponent = ({
             </div>
           </div>
 
-          {/* Aviso de execução */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-amber-800 mb-1">
-                  Atenção - Execução em Ambiente de Produção
-                </p>
-                <p className="text-sm text-amber-700">
-                  Esta automação será executada em ambiente de produção. 
-                  Certifique-se de que é seguro prosseguir com a execução.
-                </p>
+          {/* Aviso de execução - só mostra antes da execução */}
+          {!executionResult && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-800 mb-1">
+                    Atenção - Execução em Ambiente de Produção
+                  </p>
+                  <p className="text-sm text-amber-700">
+                    Esta automação será executada em ambiente de produção. 
+                    Certifique-se de que é seguro prosseguir com a execução.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Resultado da execução */}
           {executionResult && (
