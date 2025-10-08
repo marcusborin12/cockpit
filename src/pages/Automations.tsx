@@ -314,8 +314,8 @@ const Automations = () => {
                 <Card key={template.id} className="shadow-card hover:shadow-elevated transition-all relative">
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="absolute top-3 right-3 h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 z-10"
+                    variant="default"
+                    className="absolute top-3 right-3 h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all z-10"
                     onClick={() => {
                       console.log('🚀 Abrindo modal de execução com filtros:', {
                         systemSigla: filters.systemSigla,
@@ -327,7 +327,7 @@ const Automations = () => {
                     }}
                     title="Executar automação"
                   >
-                    <Play className="w-4 h-4" />
+                    <Play className="w-4 h-4 fill-current" />
                   </Button>
                   <CardHeader className="pb-3 pr-14">
                     <div className="flex items-start justify-between gap-2">
