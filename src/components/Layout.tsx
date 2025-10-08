@@ -3,8 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Play, 
-  FileText, 
-  Settings,
   Menu
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -16,8 +14,6 @@ interface LayoutProps {
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Play, label: "Automações", path: "/automations" },
-  { icon: FileText, label: "Logs", path: "/logs" },
-  { icon: Settings, label: "Administração", path: "/admin" },
 ];
 
 export const Layout = ({ children }: LayoutProps) => {
