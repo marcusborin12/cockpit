@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   Play, 
   AlertTriangle, 
@@ -271,6 +272,30 @@ const JobExecutionModalComponent = ({
       fetchServersFromInventory();
     }
   }, [isOpen, fetchServersFromInventory]);
+
+  // Função para transformar servidores em lista plana para tabela
+  const getServersForTable = useCallback(() => {
+    const serversList: Array<{ name: string; group: string }> = [];
+    
+    Object.entries(servers)
+      .filter(([groupName, groupServers]) => {
+        // Se há um grupo específico selecionado, mostra apenas esse grupo
+        if (currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__') {
+          return groupName.toLowerCase() === currentFilters.selectedGroup.toLowerCase();
+        }
+        return true; // Mostra todos os grupos se não há filtro específico
+      })
+      .forEach(([groupName, groupServers]) => {
+        groupServers.forEach(serverName => {
+          serversList.push({
+            name: serverName,
+            group: groupName
+          });
+        });
+      });
+    
+    return serversList;
+  }, [servers, currentFilters?.selectedGroup]);
 
   // Função para buscar status do job (otimizada)
   const fetchJobStatus = useCallback(async (jobId: number) => {
@@ -558,14 +583,21 @@ const JobExecutionModalComponent = ({
 
             {/* Lista de Servidores */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Server className="w-4 h-4 text-muted-foreground" />
-                <h3 className="font-medium text-sm text-muted-foreground">
-                  Servidores que receberão a automação
-                  {loadingServers && (
-                    <RefreshCw className="w-3 h-3 animate-spin ml-2 inline" />
-                  )}
-                </h3>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Server className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="font-medium text-sm text-muted-foreground">
+                    Servidores que receberão a automação
+                    {loadingServers && (
+                      <RefreshCw className="w-3 h-3 animate-spin ml-2 inline" />
+                    )}
+                  </h3>
+                </div>
+                {!loadingServers && Object.keys(servers).length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {getServersForTable().length} servidor{getServersForTable().length !== 1 ? 'es' : ''}
+                  </Badge>
+                )}
               </div>
               <div className="bg-gray-50 border rounded-lg p-3">
                 {loadingServers ? (
@@ -578,31 +610,34 @@ const JobExecutionModalComponent = ({
                     <p className="text-sm text-muted-foreground">Nenhum servidor encontrado no inventário</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {Object.entries(servers)
-                      .filter(([groupName, groupServers]) => {
-                        // Se há um grupo específico selecionado, mostra apenas esse grupo
-                        if (currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__') {
-                          return groupName.toLowerCase() === currentFilters.selectedGroup.toLowerCase();
-                        }
-                        return true; // Mostra todos os grupos se não há filtro específico
-                      })
-                      .map(([groupName, groupServers]) => (
-                        <div key={groupName} className="space-y-2">
-                          <h4 className="font-medium text-xs text-muted-foreground uppercase tracking-wide">
-                            Grupo: {groupName}
-                            <span className="ml-2 text-xs font-normal">({groupServers.length} servidor{groupServers.length !== 1 ? 'es' : ''})</span>
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {groupServers.map((server, index) => (
-                              <div key={index} className="flex items-center gap-2 p-2 bg-white rounded border">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="font-mono text-xs">{server}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                  <div className="bg-white rounded border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs font-medium">Servidor</TableHead>
+                          <TableHead className="text-xs font-medium">Grupo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                    </Table>
+                    <ScrollArea className="h-[120px]">
+                      <Table>
+                        <TableBody>
+                          {getServersForTable().map((server, index) => (
+                            <TableRow key={index} className="hover:bg-gray-50">
+                              <TableCell className="font-mono text-xs py-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  {server.name}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs py-2 text-muted-foreground">
+                                {server.group.toUpperCase()}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
                   </div>
                 )}
                 
@@ -615,8 +650,10 @@ const JobExecutionModalComponent = ({
                             <span className="text-red-600">Erro ao conectar com o inventário <strong>{inventoryInfo.name}</strong></span>
                           ) : (
                             <>
-                              Hosts do inventário <strong>{inventoryInfo.name}</strong>
-                              {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' ? (
+                              <strong>{getServersForTable().length}</strong> servidor{getServersForTable().length !== 1 ? 'es' : ''} do inventário <strong>{inventoryInfo.name}</strong>
+                              {currentFilters?.selectedServer && currentFilters.selectedServer !== '__all__' ? (
+                                <span> - <strong>FILTRADO</strong> pelo servidor <strong>{currentFilters.selectedServer}</strong></span>
+                              ) : currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' ? (
                                 <span> - <strong>FILTRADO</strong> pelo grupo <strong>{currentFilters.selectedGroup}</strong></span>
                               ) : (
                                 <span> - todos os grupos</span>
