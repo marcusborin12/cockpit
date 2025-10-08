@@ -17,8 +17,7 @@ import {
   Clock,
   CheckCircle2,
   FileText,
-  RefreshCw,
-  Hourglass
+  RefreshCw
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
@@ -441,23 +440,6 @@ const JobExecutionModalComponent = ({
             jobError={jobError}
             getStatusDisplay={getStatusDisplay}
           />
-
-          {/* Indicador de Execução */}
-          {executionResult?.success && jobStatus && ['running', 'pending', 'waiting'].includes(jobStatus) && (
-            <div className="border rounded-lg p-6 bg-blue-50 border-blue-200">
-              <div className="flex items-center justify-center gap-3">
-                <Hourglass className="w-6 h-6 text-blue-600 animate-pulse" />
-                <div className="text-center">
-                  <p className="font-medium text-blue-800 mb-1">
-                    Automação em Execução
-                  </p>
-                  <p className="text-sm text-blue-700">
-                    Por favor, aguarde enquanto a automação está sendo processada...
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Botões */}
           <div className="flex justify-end gap-3 pt-4">
