@@ -67,7 +67,11 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         const nameParts = template.name.toLowerCase().split('-');
         if (nameParts.length >= 2) {
           const systemPart = nameParts[1];
-          return systemPart === selectedSystem;
+          const matchesSystem = systemPart === selectedSystem;
+          if (matchesSystem) {
+            console.log('✅ Template passou no filtro de sistema:', template.name);
+          }
+          return matchesSystem;
         }
         return false;
       });
@@ -84,7 +88,11 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         }
         
         // Filtro normal por grupo
-        return template.name.toLowerCase().includes(`-${selectedGroup}-`);
+        const matchesGroup = template.name.toLowerCase().includes(`-${selectedGroup}-`);
+        if (matchesGroup) {
+          console.log('✅ Template passou no filtro de grupo:', template.name);
+        }
+        return matchesGroup;
       });
     }
 
