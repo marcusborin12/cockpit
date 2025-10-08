@@ -208,6 +208,10 @@ const JobExecutionModalComponent = ({
   // Effect para buscar servidores quando o sistema ou grupo mudam
   useEffect(() => {
     if (isOpen) {
+      console.log('🔄 JobExecutionModal: Modal aberto, buscando servidores...', {
+        isOpen,
+        currentFilters
+      });
       fetchServersFromInventory();
     }
   }, [isOpen, fetchServersFromInventory]);
