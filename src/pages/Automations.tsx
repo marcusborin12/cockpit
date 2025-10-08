@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAutomations } from "@/hooks/useAutomations";
 import { Play, Search, Filter, RefreshCw, Database, Settings, AlertCircle } from "lucide-react";
@@ -18,6 +20,7 @@ const Automations = () => {
   const {
     filters,
     updateFilter,
+    updateServersFilter,
     clearFilters,
     systems,
     inventories,
@@ -125,24 +128,72 @@ const Automations = () => {
               </SelectContent>
             </Select>
 
-            {/* Servidor */}
-            <Select 
-              value={filters.selectedServer} 
-              onValueChange={(value) => updateFilter('selectedServer', value)}
-              disabled={filters.systemSigla === 'all' || filters.selectedGroup === '__all__' || servers.loading}
-            >
-              <SelectTrigger className="w-full sm:w-[180px] h-11">
-                <SelectValue placeholder="Selecionar servidor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos os servidores</SelectItem>
-                {servers.servers.map((server) => (
-                  <SelectItem key={server} value={server}>
-                    {server}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Servidores (Multi-select) */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="w-full sm:w-[200px] h-11 justify-between"
+                  disabled={filters.systemSigla === 'all' || filters.selectedGroup === '__all__' || servers.loading}
+                >
+                  <span className="truncate">
+                    {filters.selectedServers.length === 0 
+                      ? "Selecionar servidores" 
+                      : filters.selectedServers.length === 1
+                        ? filters.selectedServers[0]
+                        : `${filters.selectedServers.length} servidores`
+                    }
+                  </span>
+                  <Search className="w-4 h-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-0" align="start">
+                <div className="p-2 space-y-2 max-h-[200px] overflow-y-auto">
+                  {servers.servers.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-2">
+                      Nenhum servidor disponível
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center space-x-2 p-2 border-b">
+                        <Checkbox
+                          id="select-all"
+                          checked={filters.selectedServers.length === servers.servers.length}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              updateServersFilter(servers.servers);
+                            } else {
+                              updateServersFilter([]);
+                            }
+                          }}
+                        />
+                        <label htmlFor="select-all" className="text-sm font-medium">
+                          Todos os servidores
+                        </label>
+                      </div>
+                      {servers.servers.map((server) => (
+                        <div key={server} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                          <Checkbox
+                            id={server}
+                            checked={filters.selectedServers.includes(server)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                updateServersFilter([...filters.selectedServers, server]);
+                              } else {
+                                updateServersFilter(filters.selectedServers.filter(s => s !== server));
+                              }
+                            }}
+                          />
+                          <label htmlFor={server} className="text-sm font-mono cursor-pointer flex-1">
+                            {server}
+                          </label>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* Actions */}
             <div className="flex gap-2">
@@ -172,7 +223,7 @@ const Automations = () => {
           </div>
 
           {/* Filter Summary */}
-          {(filters.systemSigla !== 'all' || filters.selectedGroup || filters.selectedServer || filters.searchTerm) && (
+          {(filters.systemSigla !== 'all' || filters.selectedGroup || filters.selectedServers.length > 0 || filters.searchTerm) && (
             <div className="flex flex-wrap gap-2">
               {filters.systemSigla !== 'all' && (
                 <Badge variant="secondary" className="gap-1">
@@ -186,10 +237,13 @@ const Automations = () => {
                   Grupo: {filters.selectedGroup.toUpperCase()}
                 </Badge>
               )}
-              {filters.selectedServer && filters.selectedServer !== '__all__' && (
+              {filters.selectedServers.length > 0 && (
                 <Badge variant="secondary" className="gap-1">
                   <Settings className="w-3 h-3" />
-                  Servidor: {filters.selectedServer}
+                  {filters.selectedServers.length === 1 
+                    ? `Servidor: ${filters.selectedServers[0]}`
+                    : `Servidores: ${filters.selectedServers.length} selecionados`
+                  }
                 </Badge>
               )}
               {filters.searchTerm && (
@@ -339,7 +393,7 @@ const Automations = () => {
         currentFilters={{
           systemSigla: filters.systemSigla,
           selectedGroup: filters.selectedGroup,
-          selectedServer: filters.selectedServer
+          selectedServers: filters.selectedServers
         }}
         onExecutionStarted={(jobId) => {
           console.log('Job iniciado:', jobId);

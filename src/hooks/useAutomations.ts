@@ -6,7 +6,7 @@ export interface AutomationFilters {
   systemSigla: string;
   selectedInventory: string;
   selectedGroup: string;
-  selectedServer: string;
+  selectedServers: string[];
   searchTerm: string;
 }
 
@@ -295,7 +295,7 @@ export const useAutomations = () => {
     systemSigla: 'all',
     selectedInventory: '',
     selectedGroup: '__all__',
-    selectedServer: '__all__',
+    selectedServers: [],
     searchTerm: '',
   });
 
@@ -313,18 +313,18 @@ export const useAutomations = () => {
       if (key === 'systemSigla') {
         newFilters.selectedInventory = '';
         newFilters.selectedGroup = '__all__';
-        newFilters.selectedServer = '__all__';
+        newFilters.selectedServers = [];
       }
       
       // Reset grupo quando inventário muda
       if (key === 'selectedInventory') {
         newFilters.selectedGroup = '__all__';
-        newFilters.selectedServer = '__all__';
+        newFilters.selectedServers = [];
       }
 
-      // Reset servidor quando grupo muda
+      // Reset servidores quando grupo muda
       if (key === 'selectedGroup') {
-        newFilters.selectedServer = '__all__';
+        newFilters.selectedServers = [];
       }
 
       // Mantém "__all__" como está para compatibilidade com JobExecutionModal
@@ -334,12 +334,19 @@ export const useAutomations = () => {
     });
   };
 
+  const updateServersFilter = (servers: string[]) => {
+    setFilters(prev => ({
+      ...prev,
+      selectedServers: servers
+    }));
+  };
+
   const clearFilters = () => {
     setFilters({
       systemSigla: 'all',
       selectedInventory: '',
       selectedGroup: '__all__',
-      selectedServer: '__all__',
+      selectedServers: [],
       searchTerm: '',
     });
   };
@@ -347,6 +354,7 @@ export const useAutomations = () => {
   return {
     filters,
     updateFilter,
+    updateServersFilter,
     clearFilters,
     systems,
     inventories,

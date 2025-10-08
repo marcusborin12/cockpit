@@ -513,7 +513,7 @@ class AWXService {
     options?: {
       systemSigla?: string;
       selectedGroup?: string;
-      selectedServer?: string;
+      selectedServers?: string[];
     }
   ): Promise<AWXJob> {
     const endpoint = buildAwxUrl(AWX_CONFIG.ENDPOINTS.JOB_LAUNCHES, { id: templateId });
@@ -532,13 +532,13 @@ class AWXService {
 
     // Define o limit baseado nos filtros aplicados
     // Regras:
-    // 1. Servidor específico → limit = nome do servidor
+    // 1. Servidores específicos → limit = lista de servidores separada por vírgula
     // 2. Todos os servidores de um grupo → limit = nome do grupo  
     // 3. Sem filtros específicos → sem limit (todo inventário)
-    if (options?.selectedServer && options.selectedServer !== '__all__') {
-      // Servidor específico selecionado: limit = nome do servidor
-      launchData.limit = options.selectedServer;
-      console.log('🎯 Executando com limite de servidor específico:', options.selectedServer);
+    if (options?.selectedServers && options.selectedServers.length > 0) {
+      // Servidores específicos selecionados: limit = lista separada por vírgula
+      launchData.limit = options.selectedServers.join(',');
+      console.log('🎯 Executando com limite de servidores específicos:', options.selectedServers);
     } else if (options?.selectedGroup && options.selectedGroup !== '__all__') {
       // Grupo específico mas todos os servidores: limit = nome do grupo
       launchData.limit = options.selectedGroup;
@@ -551,12 +551,12 @@ class AWXService {
       inventoryId: inventory.id,
       inventoryName: inventory.name,
       limit: launchData.limit,
-      limitType: options?.selectedServer && options.selectedServer !== '__all__' 
-        ? 'servidor específico' 
+      limitType: options?.selectedServers && options.selectedServers.length > 0 
+        ? `servidores específicos (${options.selectedServers.length})` 
         : options?.selectedGroup && options.selectedGroup !== '__all__' 
           ? 'grupo específico' 
           : 'todo inventário',
-      filterServer: options?.selectedServer,
+      filterServers: options?.selectedServers,
       filterGroup: options?.selectedGroup,
       extraVars: extraVars || {}
     });
