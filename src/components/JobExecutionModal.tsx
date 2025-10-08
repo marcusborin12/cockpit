@@ -403,36 +403,6 @@ const JobExecutionModalComponent = ({
             </div>
           )}
 
-          {/* Resultado da execução */}
-          {executionResult && (
-            <div className={`border rounded-lg p-4 ${
-              executionResult.success 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
-            }`}>
-              <div className="flex items-start gap-3">
-                {executionResult.success ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                )}
-                <div>
-                  <p className={`font-medium mb-1 ${
-                    executionResult.success ? 'text-green-800' : 'text-red-800'
-                  }`}>
-                    {executionResult.success ? 'Execução Iniciada!' : 'Erro na Execução'}
-                  </p>
-                  <p className={`text-sm ${
-                    executionResult.success ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {executionResult.message}
-                  </p>
-
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Status da Execução */}
           <JobStatusDisplay 
             currentJob={currentJob}
