@@ -320,7 +320,7 @@ const JobExecutionModalComponent = ({
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <h4 className="font-medium text-sm text-muted-foreground">Área</h4>
                 <Badge variant="outline">{area}</Badge>
@@ -332,6 +332,17 @@ const JobExecutionModalComponent = ({
               <div className="space-y-1">
                 <h4 className="font-medium text-sm text-muted-foreground">Ação</h4>
                 <Badge variant="outline">{action}</Badge>
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-medium text-sm text-muted-foreground">Inventário</h4>
+                <Badge variant="outline">
+                  {currentFilters?.systemSigla && currentFilters.systemSigla !== 'all' 
+                    ? currentFilters.systemSigla 
+                    : 'Automático'}
+                  {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
+                    <span className="ml-1">({currentFilters.selectedGroup})</span>
+                  )}
+                </Badge>
               </div>
             </div>
 
@@ -361,27 +372,6 @@ const JobExecutionModalComponent = ({
                   <span className="ml-2">{jobTemplate.playbook}</span>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Aviso sobre inventário */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-blue-800 mb-1">
-                  Inventário Automático
-                </p>
-                <p className="text-sm text-blue-700">
-                  O inventário será selecionado automaticamente baseado no sistema escolhido
-                  {currentFilters?.systemSigla && currentFilters.systemSigla !== 'all' && (
-                    <span className="font-medium"> ({currentFilters.systemSigla})</span>
-                  )}
-                  {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
-                    <span>, limitado ao grupo <span className="font-medium">{currentFilters.selectedGroup}</span></span>
-                  )}.
-                </p>
-              </div>
             </div>
           </div>
 
