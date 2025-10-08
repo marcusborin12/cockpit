@@ -17,7 +17,8 @@ import {
   Clock,
   CheckCircle2,
   FileText,
-  RefreshCw
+  RefreshCw,
+  Hourglass
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
@@ -108,16 +109,12 @@ const JobExecutionModalComponent = ({
     jobId?: number;
     message: string;
   } | null>(null);
-  const [logs, setLogs] = useState<string>('');
-  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-  const [showLogs, setShowLogs] = useState(false);
   const [currentJob, setCurrentJob] = useState<AWXJob | null>(null);
   const [jobStatus, setJobStatus] = useState<string>('');
   const [jobError, setJobError] = useState<string>('');
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastJobHashRef = useRef<string>('');
-  const lastLogUpdateRef = useRef<number>(0);
 
   // Função para buscar status do job (otimizada)
   const fetchJobStatus = useCallback(async (jobId: number) => {
@@ -146,41 +143,19 @@ const JobExecutionModalComponent = ({
     }
   }, []);
 
-  // Função para buscar logs (com throttling para reduzir re-renderizações)
-  const fetchLogs = useCallback(async (jobId: number) => {
-    try {
-      const newLogs = await awxService.getJobLogs(jobId);
-      
-      // Só atualiza os logs se houver mudança significativa (mais de 100 caracteres de diferença)
-      setLogs(prevLogs => {
-        if (prevLogs === newLogs) return prevLogs;
-        
-        // Se a diferença for muito pequena e frequente, evita update
-        const sizeDiff = Math.abs(newLogs.length - prevLogs.length);
-        if (sizeDiff < 100 && Date.now() - lastLogUpdateRef.current < 2000) {
-          return prevLogs;
-        }
-        
-        lastLogUpdateRef.current = Date.now();
-        return newLogs;
-      });
-    } catch (error) {
-      console.error('Erro ao buscar logs:', error);
-    }
-  }, []);
 
-  // Effect para polling do status e logs (simplificado)
+
+  // Effect para polling do status do job (simplificado)
   useEffect(() => {
     let jobId: number | null = null;
     let isActive = true;
 
-    // Só inicia polling se o job foi executado com sucesso e os logs estão sendo mostrados
-    if (executionResult?.success && executionResult.jobId && showLogs) {
+    // Só inicia polling se o job foi executado com sucesso
+    if (executionResult?.success && executionResult.jobId) {
       jobId = executionResult.jobId;
       
       // Busca inicial
       fetchJobStatus(jobId);
-      fetchLogs(jobId);
       
       // Configura polling a cada 5 segundos
       const poll = async () => {
@@ -192,13 +167,8 @@ const JobExecutionModalComponent = ({
           
           // Se o job terminou, para o polling
           if (['successful', 'failed', 'error', 'canceled'].includes(job.status)) {
-            // Busca os logs uma última vez
-            await fetchLogs(jobId);
             return; // Para o polling
           }
-          
-          // Continua buscando logs se o job ainda está rodando
-          await fetchLogs(jobId);
           
           // Agenda próximo poll
           if (isActive) {
@@ -216,7 +186,7 @@ const JobExecutionModalComponent = ({
     return () => {
       isActive = false;
     };
-  }, [executionResult?.jobId, showLogs, fetchJobStatus, fetchLogs]);
+  }, [executionResult?.jobId, fetchJobStatus]);
 
   // Removido auto-scroll para evitar re-renderizações
 
@@ -270,9 +240,6 @@ const JobExecutionModalComponent = ({
         onExecutionStarted(job.id);
       }
 
-      // Mostra os logs automaticamente
-      setShowLogs(true);
-
     } catch (error) {
       console.error('❌ Erro na execução do job template:', error);
       
@@ -301,7 +268,7 @@ const JobExecutionModalComponent = ({
 
   const handleClose = useCallback(() => {
     if (!isExecuting) {
-      // Limpa o polling dos logs
+      // Limpa o polling
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -311,14 +278,10 @@ const JobExecutionModalComponent = ({
       setTimeout(() => {
         onClose();
         setExecutionResult(null);
-        setLogs('');
-        setShowLogs(false);
-        setIsLoadingLogs(false);
         setCurrentJob(null);
         setJobStatus('');
         setJobError('');
         lastJobHashRef.current = '';
-        lastLogUpdateRef.current = 0;
       }, 0);
     }
   }, [isExecuting, onClose]);
@@ -479,24 +442,19 @@ const JobExecutionModalComponent = ({
             getStatusDisplay={getStatusDisplay}
           />
 
-          {/* Seção de Logs */}
-          {showLogs && executionResult?.jobId && (
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium">Logs da Execução</h3>
-                <button
-                  onClick={() => setShowLogs(false)}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Ocultar
-                </button>
-              </div>
-              
-              <div 
-                className="h-80 w-full border rounded bg-gray-900 text-green-400 font-mono text-sm overflow-y-auto p-3"
-                style={{ maxHeight: '320px' }}
-              >
-                {logs || (isLoadingLogs ? 'Carregando logs...' : 'Nenhum log disponível ainda')}
+          {/* Indicador de Execução */}
+          {executionResult?.success && jobStatus && ['running', 'pending', 'waiting'].includes(jobStatus) && (
+            <div className="border rounded-lg p-6 bg-blue-50 border-blue-200">
+              <div className="flex items-center justify-center gap-3">
+                <Hourglass className="w-6 h-6 text-blue-600 animate-pulse" />
+                <div className="text-center">
+                  <p className="font-medium text-blue-800 mb-1">
+                    Automação em Execução
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Por favor, aguarde enquanto a automação está sendo processada...
+                  </p>
+                </div>
               </div>
             </div>
           )}
