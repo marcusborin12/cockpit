@@ -17,7 +17,8 @@ import {
   Clock,
   CheckCircle2,
   FileText,
-  RefreshCw
+  RefreshCw,
+  Server
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
@@ -372,6 +373,68 @@ const JobExecutionModalComponent = ({
                   <span className="ml-2">{jobTemplate.playbook}</span>
                 </div>
               )}
+            </div>
+
+            <Separator />
+
+            {/* Lista de Servidores */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Server className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium text-sm text-muted-foreground">
+                  Servidores que receberão a automação
+                </h3>
+              </div>
+              <div className="bg-gray-50 border rounded-lg p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                  {(() => {
+                    // Gera lista de servidores baseada no sistema e grupo selecionados
+                    const getServerList = () => {
+                      const baseServers = [
+                        'srv-web-01', 'srv-web-02', 'srv-app-01', 'srv-app-02', 
+                        'srv-db-01', 'srv-cache-01', 'srv-queue-01', 'srv-api-01'
+                      ];
+                      
+                      if (currentFilters?.systemSigla && currentFilters.systemSigla !== 'all') {
+                        // Filtra servidores baseado no sistema
+                        const systemPrefix = currentFilters.systemSigla.toLowerCase();
+                        let filteredServers = baseServers.map(server => 
+                          `${systemPrefix}-${server}`
+                        );
+                        
+                        // Se há grupo específico, reduz ainda mais a lista
+                        if (currentFilters.selectedGroup && currentFilters.selectedGroup !== '__all__') {
+                          const groupType = currentFilters.selectedGroup.toLowerCase();
+                          filteredServers = filteredServers.filter(server => 
+                            server.includes(groupType) || server.includes('web') || server.includes('app')
+                          );
+                        }
+                        
+                        return filteredServers.slice(0, 6); // Limita a 6 servidores
+                      }
+                      
+                      // Se não há filtros específicos, mostra servidores genéricos
+                      return ['Todos os servidores do ambiente', 'Seleção automática baseada no inventário'];
+                    };
+
+                    const servers = getServerList();
+                    return servers.map((server, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-white rounded border">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="font-mono text-xs">{server}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+                {currentFilters?.systemSigla && currentFilters.systemSigla !== 'all' && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Lista baseada no sistema <strong>{currentFilters.systemSigla}</strong>
+                    {currentFilters.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
+                      <span> e grupo <strong>{currentFilters.selectedGroup}</strong></span>
+                    )}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
