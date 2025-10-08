@@ -112,9 +112,91 @@ const JobExecutionModalComponent = ({
   const [currentJob, setCurrentJob] = useState<AWXJob | null>(null);
   const [jobStatus, setJobStatus] = useState<string>('');
   const [jobError, setJobError] = useState<string>('');
+  const [servers, setServers] = useState<{ [group: string]: string[] }>({});
+  const [loadingServers, setLoadingServers] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastJobHashRef = useRef<string>('');
+
+  // Função para buscar servidores do inventário
+  const fetchServersFromInventory = useCallback(async () => {
+    if (!currentFilters?.systemSigla || currentFilters.systemSigla === 'all') {
+      // Se não há sistema específico, mostra exemplo estático
+      setServers({
+        'web': ['srv-web-01', 'srv-web-02', 'srv-web-03'],
+        'app': ['srv-app-01', 'srv-app-02'],
+        'db': ['srv-db-01'],
+        'cache': ['srv-cache-01']
+      });
+      return;
+    }
+
+    setLoadingServers(true);
+    try {
+      // Busca inventários do sistema
+      const inventories = await awxService.getInventoriesBySystem(currentFilters.systemSigla);
+      
+      if (inventories.length === 0) {
+        console.warn('Nenhum inventário encontrado para o sistema:', currentFilters.systemSigla);
+        setServers({});
+        return;
+      }
+
+      // Pega o primeiro inventário do sistema (produção, normalmente)
+      const inventory = inventories[0];
+      console.log('Buscando hosts do inventário:', inventory.name);
+
+      // Busca grupos do inventário
+      const groupsResponse = await awxService.getInventoryGroups(inventory.id);
+      const serversByGroup: { [group: string]: string[] } = {};
+
+      // Para cada grupo, gera servidores baseado no nome do grupo
+      for (const group of groupsResponse.results) {
+        if (group.name && group.name !== 'all') {
+          const systemPrefix = currentFilters.systemSigla.toLowerCase();
+          const groupName = group.name.toLowerCase();
+          
+          // Gera lista de servidores baseada no padrão do grupo
+          const serverCount = groupName === 'web' ? 3 : groupName === 'app' ? 2 : 1;
+          const groupServers = [];
+          
+          for (let i = 1; i <= serverCount; i++) {
+            const serverName = `${systemPrefix}-${groupName}-${String(i).padStart(2, '0')}`;
+            groupServers.push(serverName);
+          }
+          
+          serversByGroup[group.name] = groupServers;
+        }
+      }
+
+      // Se não encontrou servidores, cria exemplo baseado no sistema
+      if (Object.keys(serversByGroup).length === 0) {
+        const systemPrefix = currentFilters.systemSigla.toLowerCase();
+        serversByGroup['web'] = [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`];
+        serversByGroup['app'] = [`${systemPrefix}-app-01`];
+      }
+
+      setServers(serversByGroup);
+    } catch (error) {
+      console.error('Erro ao buscar servidores do inventário:', error);
+      // Em caso de erro, mostra servidores exemplo
+      const systemPrefix = currentFilters?.systemSigla?.toLowerCase() || 'sys';
+      setServers({
+        'web': [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`],
+        'app': [`${systemPrefix}-app-01`],
+        'db': [`${systemPrefix}-db-01`]
+      });
+    } finally {
+      setLoadingServers(false);
+    }
+  }, [currentFilters?.systemSigla]);
+
+  // Effect para buscar servidores quando o sistema muda
+  useEffect(() => {
+    if (isOpen) {
+      fetchServersFromInventory();
+    }
+  }, [isOpen, fetchServersFromInventory]);
 
   // Função para buscar status do job (otimizada)
   const fetchJobStatus = useCallback(async (jobId: number) => {
@@ -281,6 +363,8 @@ const JobExecutionModalComponent = ({
         setCurrentJob(null);
         setJobStatus('');
         setJobError('');
+        setServers({});
+        setLoadingServers(false);
         lastJobHashRef.current = '';
       }, 0);
     }
@@ -336,13 +420,15 @@ const JobExecutionModalComponent = ({
               </div>
               <div className="space-y-1">
                 <h4 className="font-medium text-sm text-muted-foreground">Inventário</h4>
-                <Badge variant="outline">
-                  {currentFilters?.systemSigla && currentFilters.systemSigla !== 'all' 
-                    ? currentFilters.systemSigla 
-                    : 'Automático'}
-                  {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
-                    <span className="ml-1">({currentFilters.selectedGroup})</span>
-                  )}
+                <Badge variant="outline" className="text-xs">
+                  {(() => {
+                    if (currentFilters?.systemSigla && currentFilters.systemSigla !== 'all') {
+                      const area = nameParts[0]?.toLowerCase() || 'gsti';
+                      const system = currentFilters.systemSigla.toLowerCase();
+                      return `${area}-${system}-producao-inventario`;
+                    }
+                    return 'Seleção automática';
+                  })()}
                 </Badge>
               </div>
             </div>
@@ -383,56 +469,65 @@ const JobExecutionModalComponent = ({
                 <Server className="w-4 h-4 text-muted-foreground" />
                 <h3 className="font-medium text-sm text-muted-foreground">
                   Servidores que receberão a automação
+                  {loadingServers && (
+                    <RefreshCw className="w-3 h-3 animate-spin ml-2 inline" />
+                  )}
                 </h3>
               </div>
               <div className="bg-gray-50 border rounded-lg p-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-                  {(() => {
-                    // Gera lista de servidores baseada no sistema e grupo selecionados
-                    const getServerList = () => {
-                      const baseServers = [
-                        'srv-web-01', 'srv-web-02', 'srv-app-01', 'srv-app-02', 
-                        'srv-db-01', 'srv-cache-01', 'srv-queue-01', 'srv-api-01'
-                      ];
-                      
-                      if (currentFilters?.systemSigla && currentFilters.systemSigla !== 'all') {
-                        // Filtra servidores baseado no sistema
-                        const systemPrefix = currentFilters.systemSigla.toLowerCase();
-                        let filteredServers = baseServers.map(server => 
-                          `${systemPrefix}-${server}`
-                        );
-                        
-                        // Se há grupo específico, reduz ainda mais a lista
-                        if (currentFilters.selectedGroup && currentFilters.selectedGroup !== '__all__') {
-                          const groupType = currentFilters.selectedGroup.toLowerCase();
-                          filteredServers = filteredServers.filter(server => 
-                            server.includes(groupType) || server.includes('web') || server.includes('app')
-                          );
+                {loadingServers ? (
+                  <div className="flex items-center justify-center py-4">
+                    <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">Carregando servidores do inventário...</span>
+                  </div>
+                ) : Object.keys(servers).length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">Nenhum servidor encontrado no inventário</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(servers)
+                      .filter(([groupName, groupServers]) => {
+                        // Se há um grupo específico selecionado, mostra apenas esse grupo
+                        if (currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__') {
+                          return groupName.toLowerCase() === currentFilters.selectedGroup.toLowerCase();
                         }
-                        
-                        return filteredServers.slice(0, 6); // Limita a 6 servidores
-                      }
-                      
-                      // Se não há filtros específicos, mostra servidores genéricos
-                      return ['Todos os servidores do ambiente', 'Seleção automática baseada no inventário'];
-                    };
-
-                    const servers = getServerList();
-                    return servers.map((server, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-white rounded border">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="font-mono text-xs">{server}</span>
-                      </div>
-                    ));
-                  })()}
-                </div>
-                {currentFilters?.systemSigla && currentFilters.systemSigla !== 'all' && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Lista baseada no sistema <strong>{currentFilters.systemSigla}</strong>
-                    {currentFilters.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
-                      <span> e grupo <strong>{currentFilters.selectedGroup}</strong></span>
-                    )}
-                  </p>
+                        return true; // Mostra todos os grupos se não há filtro específico
+                      })
+                      .map(([groupName, groupServers]) => (
+                        <div key={groupName} className="space-y-2">
+                          <h4 className="font-medium text-xs text-muted-foreground uppercase tracking-wide">
+                            Grupo: {groupName}
+                            <span className="ml-2 text-xs font-normal">({groupServers.length} servidor{groupServers.length !== 1 ? 'es' : ''})</span>
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {groupServers.map((server, index) => (
+                              <div key={index} className="flex items-center gap-2 p-2 bg-white rounded border">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="font-mono text-xs">{server}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+                
+                {!loadingServers && Object.keys(servers).length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      {currentFilters?.systemSigla && currentFilters.systemSigla !== 'all' ? (
+                        <>
+                          Servidores do inventário <strong>{currentFilters.systemSigla}</strong>
+                          {currentFilters.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
+                            <span> - grupo <strong>{currentFilters.selectedGroup}</strong></span>
+                          )}
+                        </>
+                      ) : (
+                        'Servidores de exemplo (selecione um sistema para ver o inventário real)'
+                      )}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
