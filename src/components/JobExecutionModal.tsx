@@ -145,6 +145,13 @@ const JobExecutionModalComponent = ({
       console.log('Inventário encontrado:', inventory.name);
 
       // Busca hosts reais do inventário, agrupados por grupos
+      console.log('🎯 Parâmetros de busca:', {
+        inventoryId: inventory.id,
+        inventoryName: inventory.name,
+        selectedGroup: currentFilters?.selectedGroup,
+        filterActive: currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__'
+      });
+      
       const realHostsByGroups = await awxService.getInventoryHostsByGroups(
         inventory.id, 
         currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' 
@@ -153,9 +160,11 @@ const JobExecutionModalComponent = ({
       );
 
       if (Object.keys(realHostsByGroups).length > 0) {
-        console.log('Hosts encontrados:', realHostsByGroups);
+        console.log('✅ Hosts reais encontrados:', realHostsByGroups);
         setServers(realHostsByGroups);
       } else {
+        console.log('⚠️ Nenhum host real encontrado. Gerando fallback...');
+        
         // Fallback: se não encontrou hosts reais, gera exemplo baseado no inventário
         const inventoryParts = inventory.name.toLowerCase().split('-');
         const systemPrefix = inventoryParts.length >= 2 ? inventoryParts[1] : 'sys';
@@ -172,11 +181,13 @@ const JobExecutionModalComponent = ({
             groupServers.push(`${systemPrefix}-${groupName}-${String(i).padStart(2, '0')}`);
           }
           fallbackServers[currentFilters.selectedGroup] = groupServers;
+          console.log(`📝 Fallback gerado para grupo ${currentFilters.selectedGroup}:`, groupServers);
         } else {
           // Mostra grupos padrão
           fallbackServers['web'] = [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`];
           fallbackServers['app'] = [`${systemPrefix}-app-01`];
           fallbackServers['db'] = [`${systemPrefix}-db-01`];
+          console.log('📝 Fallback gerado com grupos padrão:', fallbackServers);
         }
         
         setServers(fallbackServers);
@@ -525,11 +536,20 @@ const JobExecutionModalComponent = ({
                           ) : (
                             <>
                               Hosts do inventário <strong>{inventoryInfo.name}</strong>
-                              {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
-                                <span> - filtrado pelo grupo <strong>{currentFilters.selectedGroup}</strong></span>
+                              {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' ? (
+                                <span> - <strong>FILTRADO</strong> pelo grupo <strong>{currentFilters.selectedGroup}</strong></span>
+                              ) : (
+                                <span> - todos os grupos</span>
                               )}
                               <br />
-                              <span className="text-green-600">✓ Dados reais obtidos do AWX</span>
+                              {/* Verifica se tem hosts reais (nomes que não seguem padrão de exemplo) */}
+                              {Object.values(servers).some((hostList: string[]) => 
+                                hostList.some(host => !host.match(/^\w+-\w+-\d+$/) && !host.includes('Erro'))
+                              ) ? (
+                                <span className="text-green-600">✓ Dados reais obtidos do AWX</span>
+                              ) : (
+                                <span className="text-yellow-600">⚠ Dados de exemplo (hosts não encontrados no inventário)</span>
+                              )}
                             </>
                           )}
                         </>

@@ -291,44 +291,96 @@ class AWXService {
     try {
       const hostsByGroup: { [group: string]: string[] } = {};
       
-      // Busca todos os grupos do inventário
+      console.log(`🔍 Buscando hosts do inventário ${inventoryId}`, filterGroup ? `filtrado pelo grupo: ${filterGroup}` : '(todos os grupos)');
+      
+      // Busca todos os grupos do inventário usando a API: /api/v2/inventories/{inventory_id}/groups/
       const groupsResponse = await this.getInventoryGroups(inventoryId);
+      console.log('📋 Grupos encontrados:', groupsResponse.results.map(g => g.name));
       
       for (const group of groupsResponse.results) {
         if (group.name && group.name !== 'all') {
-          // Se há filtro de grupo, pula grupos que não correspondem
-          if (filterGroup && filterGroup !== '__all__' && group.name.toLowerCase() !== filterGroup.toLowerCase()) {
-            continue;
+          // Se há filtro de grupo, processa apenas o grupo especificado
+          if (filterGroup && filterGroup !== '__all__') {
+            // Comparação mais flexível: permite que 'iis' corresponda a 'IIS', etc.
+            const groupMatches = group.name.toLowerCase() === filterGroup.toLowerCase() ||
+                                group.name.toLowerCase().includes(filterGroup.toLowerCase()) ||
+                                filterGroup.toLowerCase().includes(group.name.toLowerCase());
+            
+            if (!groupMatches) {
+              console.log(`⏭️ Pulando grupo ${group.name} (não corresponde ao filtro ${filterGroup})`);
+              continue;
+            }
           }
           
           try {
-            // Busca hosts deste grupo
+            console.log(`🔎 Buscando hosts do grupo: ${group.name} (ID: ${group.id})`);
+            
+            // Busca hosts deste grupo usando a API: /api/v2/groups/{group_id}/hosts/
             const hostsResponse = await this.getGroupHosts(inventoryId, group.id);
             
             if (hostsResponse.results && hostsResponse.results.length > 0) {
-              hostsByGroup[group.name] = hostsResponse.results.map((host: any) => host.name);
+              const hostNames = hostsResponse.results.map((host: any) => host.name);
+              hostsByGroup[group.name] = hostNames;
+              console.log(`✅ Encontrados ${hostNames.length} hosts no grupo ${group.name}:`, hostNames);
+            } else {
+              console.log(`⚠️ Nenhum host encontrado no grupo ${group.name}`);
             }
           } catch (error) {
-            console.warn(`Erro ao buscar hosts do grupo ${group.name}:`, error);
+            console.warn(`❌ Erro ao buscar hosts do grupo ${group.name}:`, error);
           }
         }
       }
       
-      // Se não encontrou hosts em grupos específicos, busca todos os hosts do inventário
-      if (Object.keys(hostsByGroup).length === 0) {
+      // Se um grupo específico foi solicitado mas não foi encontrado, tenta busca mais ampla
+      if (filterGroup && filterGroup !== '__all__' && Object.keys(hostsByGroup).length === 0) {
+        console.log(`🔄 Grupo específico '${filterGroup}' não encontrou hosts. Tentando busca mais ampla...`);
+        
+        // Lista todos os grupos para debug
+        const allGroupNames = groupsResponse.results.map(g => g.name).filter(name => name && name !== 'all');
+        console.log('🔍 Grupos disponíveis:', allGroupNames);
+        
+        // Tenta encontrar grupo com nome similar
+        const similarGroup = groupsResponse.results.find(g => 
+          g.name && g.name !== 'all' && (
+            g.name.toLowerCase().includes(filterGroup.toLowerCase()) ||
+            filterGroup.toLowerCase().includes(g.name.toLowerCase())
+          )
+        );
+        
+        if (similarGroup) {
+          console.log(`🎯 Encontrado grupo similar: ${similarGroup.name}`);
+          try {
+            const hostsResponse = await this.getGroupHosts(inventoryId, similarGroup.id);
+            if (hostsResponse.results && hostsResponse.results.length > 0) {
+              const hostNames = hostsResponse.results.map((host: any) => host.name);
+              hostsByGroup[similarGroup.name] = hostNames;
+              console.log(`✅ Encontrados ${hostNames.length} hosts no grupo similar ${similarGroup.name}:`, hostNames);
+            }
+          } catch (error) {
+            console.warn(`❌ Erro ao buscar hosts do grupo similar ${similarGroup.name}:`, error);
+          }
+        }
+      }
+      
+      // Se ainda não encontrou hosts e não há filtro específico, busca todos os hosts do inventário
+      if (Object.keys(hostsByGroup).length === 0 && (!filterGroup || filterGroup === '__all__')) {
+        console.log('🔄 Nenhum host encontrado em grupos. Buscando todos os hosts do inventário...');
         try {
           const allHostsResponse = await this.getInventoryHosts(inventoryId);
           if (allHostsResponse.results && allHostsResponse.results.length > 0) {
-            hostsByGroup['all'] = allHostsResponse.results.map((host: any) => host.name);
+            const hostNames = allHostsResponse.results.map((host: any) => host.name);
+            hostsByGroup['ungrouped'] = hostNames;
+            console.log(`✅ Encontrados ${hostNames.length} hosts não agrupados:`, hostNames);
           }
         } catch (error) {
-          console.warn('Erro ao buscar todos os hosts do inventário:', error);
+          console.warn('❌ Erro ao buscar todos os hosts do inventário:', error);
         }
       }
       
+      console.log('📊 Resultado final da busca de hosts:', hostsByGroup);
       return hostsByGroup;
     } catch (error) {
-      console.error('Erro ao buscar hosts agrupados:', error);
+      console.error('❌ Erro ao buscar hosts agrupados:', error);
       return {};
     }
   }
