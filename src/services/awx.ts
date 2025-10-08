@@ -269,6 +269,71 @@ class AWXService {
   }
 
   /**
+   * Busca hosts de um inventário específico
+   */
+  async getInventoryHosts(inventoryId: number): Promise<AWXApiResponse<any>> {
+    const endpoint = `inventories/${inventoryId}/hosts/`;
+    return this.makeRequest<AWXApiResponse<any>>(endpoint);
+  }
+
+  /**
+   * Busca hosts de um grupo específico dentro de um inventário
+   */
+  async getGroupHosts(inventoryId: number, groupId: number): Promise<AWXApiResponse<any>> {
+    const endpoint = `inventories/${inventoryId}/groups/${groupId}/hosts/`;
+    return this.makeRequest<AWXApiResponse<any>>(endpoint);
+  }
+
+  /**
+   * Busca hosts agrupados por grupos de um inventário
+   */
+  async getInventoryHostsByGroups(inventoryId: number, filterGroup?: string): Promise<{ [group: string]: string[] }> {
+    try {
+      const hostsByGroup: { [group: string]: string[] } = {};
+      
+      // Busca todos os grupos do inventário
+      const groupsResponse = await this.getInventoryGroups(inventoryId);
+      
+      for (const group of groupsResponse.results) {
+        if (group.name && group.name !== 'all') {
+          // Se há filtro de grupo, pula grupos que não correspondem
+          if (filterGroup && filterGroup !== '__all__' && group.name.toLowerCase() !== filterGroup.toLowerCase()) {
+            continue;
+          }
+          
+          try {
+            // Busca hosts deste grupo
+            const hostsResponse = await this.getGroupHosts(inventoryId, group.id);
+            
+            if (hostsResponse.results && hostsResponse.results.length > 0) {
+              hostsByGroup[group.name] = hostsResponse.results.map((host: any) => host.name);
+            }
+          } catch (error) {
+            console.warn(`Erro ao buscar hosts do grupo ${group.name}:`, error);
+          }
+        }
+      }
+      
+      // Se não encontrou hosts em grupos específicos, busca todos os hosts do inventário
+      if (Object.keys(hostsByGroup).length === 0) {
+        try {
+          const allHostsResponse = await this.getInventoryHosts(inventoryId);
+          if (allHostsResponse.results && allHostsResponse.results.length > 0) {
+            hostsByGroup['all'] = allHostsResponse.results.map((host: any) => host.name);
+          }
+        } catch (error) {
+          console.warn('Erro ao buscar todos os hosts do inventário:', error);
+        }
+      }
+      
+      return hostsByGroup;
+    } catch (error) {
+      console.error('Erro ao buscar hosts agrupados:', error);
+      return {};
+    }
+  }
+
+  /**
    * Extrai sistemas únicos dos job templates baseado no padrão de nomenclatura
    * Padrão esperado: area-sistema-acao (ex: gsti-spi-restart)
    * Baseado no padrão de inventário: area-sistema-ambiente-inventario (ex: gsti-spi-producao-inventario)

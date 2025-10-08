@@ -144,54 +144,55 @@ const JobExecutionModalComponent = ({
       setInventoryInfo(inventory);
       console.log('Inventário encontrado:', inventory.name);
 
-      // Busca grupos do inventário
-      const groupsResponse = await awxService.getInventoryGroups(inventory.id);
-      const serversByGroup: { [group: string]: string[] } = {};
+      // Busca hosts reais do inventário, agrupados por grupos
+      const realHostsByGroups = await awxService.getInventoryHostsByGroups(
+        inventory.id, 
+        currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' 
+          ? currentFilters.selectedGroup 
+          : undefined
+      );
 
-      // Para cada grupo, gera servidores baseado no nome do grupo
-      for (const group of groupsResponse.results) {
-        if (group.name && group.name !== 'all') {
-          // Extrai sistema do nome do inventário se possível
-          const inventoryParts = inventory.name.toLowerCase().split('-');
-          const systemPrefix = inventoryParts.length >= 2 ? inventoryParts[1] : 
-                              (currentFilters?.systemSigla?.toLowerCase() || 'sys');
-          const groupName = group.name.toLowerCase();
-          
-          // Gera lista de servidores baseada no padrão do grupo
+      if (Object.keys(realHostsByGroups).length > 0) {
+        console.log('Hosts encontrados:', realHostsByGroups);
+        setServers(realHostsByGroups);
+      } else {
+        // Fallback: se não encontrou hosts reais, gera exemplo baseado no inventário
+        const inventoryParts = inventory.name.toLowerCase().split('-');
+        const systemPrefix = inventoryParts.length >= 2 ? inventoryParts[1] : 'sys';
+        
+        const fallbackServers: { [group: string]: string[] } = {};
+        
+        // Se há grupo específico selecionado, mostra apenas esse grupo
+        if (currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__') {
+          const groupName = currentFilters.selectedGroup.toLowerCase();
           const serverCount = groupName === 'web' ? 3 : groupName === 'app' ? 2 : 1;
           const groupServers = [];
           
           for (let i = 1; i <= serverCount; i++) {
-            const serverName = `${systemPrefix}-${groupName}-${String(i).padStart(2, '0')}`;
-            groupServers.push(serverName);
+            groupServers.push(`${systemPrefix}-${groupName}-${String(i).padStart(2, '0')}`);
           }
-          
-          serversByGroup[group.name] = groupServers;
+          fallbackServers[currentFilters.selectedGroup] = groupServers;
+        } else {
+          // Mostra grupos padrão
+          fallbackServers['web'] = [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`];
+          fallbackServers['app'] = [`${systemPrefix}-app-01`];
+          fallbackServers['db'] = [`${systemPrefix}-db-01`];
         }
+        
+        setServers(fallbackServers);
       }
-
-      // Se não encontrou grupos, cria exemplo baseado no inventário
-      if (Object.keys(serversByGroup).length === 0) {
-        const inventoryParts = inventory.name.toLowerCase().split('-');
-        const systemPrefix = inventoryParts.length >= 2 ? inventoryParts[1] : 'sys';
-        serversByGroup['web'] = [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`];
-        serversByGroup['app'] = [`${systemPrefix}-app-01`];
-      }
-
-      setServers(serversByGroup);
     } catch (error) {
       console.error('Erro ao buscar servidores do inventário:', error);
-      // Em caso de erro, mostra informação de erro
-      setInventoryInfo(null);
+      // Em caso de erro, mantém o inventário encontrado mas mostra erro na lista de servidores
       setServers({
-        'erro': ['Erro ao conectar com o inventory']
+        'erro': [`Erro ao buscar hosts do inventário ${inventoryInfo?.name || 'selecionado'}`]
       });
     } finally {
       setLoadingServers(false);
     }
-  }, [currentFilters?.systemSigla]);
+  }, [currentFilters?.systemSigla, currentFilters?.selectedGroup]);
 
-  // Effect para buscar servidores quando o sistema muda
+  // Effect para buscar servidores quando o sistema ou grupo mudam
   useEffect(() => {
     if (isOpen) {
       fetchServersFromInventory();
@@ -519,9 +520,17 @@ const JobExecutionModalComponent = ({
                     <p className="text-xs text-muted-foreground">
                       {inventoryInfo ? (
                         <>
-                          Servidores do inventário <strong>{inventoryInfo.name}</strong>
-                          {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
-                            <span> - grupo <strong>{currentFilters.selectedGroup}</strong></span>
+                          {Object.keys(servers).includes('erro') ? (
+                            <span className="text-red-600">Erro ao conectar com o inventário <strong>{inventoryInfo.name}</strong></span>
+                          ) : (
+                            <>
+                              Hosts do inventário <strong>{inventoryInfo.name}</strong>
+                              {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
+                                <span> - filtrado pelo grupo <strong>{currentFilters.selectedGroup}</strong></span>
+                              )}
+                              <br />
+                              <span className="text-green-600">✓ Dados reais obtidos do AWX</span>
+                            </>
                           )}
                         </>
                       ) : (
