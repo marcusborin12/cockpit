@@ -1,5 +1,5 @@
 export const VERSION_INFO = {
-  version: '1.0.0-beta.1',
+  version: '1.0.0-beta.2',
   buildDate: new Date().toISOString().split('T')[0],
   environment: import.meta.env.VITE_ENVIRONMENT || 'development',
   features: [
@@ -8,7 +8,8 @@ export const VERSION_INFO = {
     'Interface responsiva moderna',
     'Seleção múltipla de servidores',
     'Monitoramento em tempo real',
-    'Integração completa AWX API'
+    'Integração completa AWX API',
+    'Exceção para playbooks SERVER (sempre visíveis)'
   ],
   status: 'BETA - Pronto para Produção'
 } as const;

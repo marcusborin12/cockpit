@@ -2,6 +2,36 @@
 
 Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
+## [1.0.0-beta.2] - 2025-10-08
+
+### 🔓 Exceção de Filtros para Playbooks SERVER
+
+### ✨ Funcionalidades Adicionadas
+- **Exceção de filtros** para playbooks com "-server-" no nome
+- **Visibilidade universal** - playbooks server sempre aparecem
+- **Bypass automático** de filtros de Sistema e Grupo
+- **Logs detalhados** para debugging de exceções
+
+### 🎯 Regra de Negócio
+Playbooks que contêm "-server-" no nome são considerados de **infraestrutura geral** e devem estar sempre visíveis, independente dos filtros aplicados.
+
+**Exemplos de playbooks afetados:**
+- `infra-server-restart`
+- `manutencao-server-update`
+- `backup-server-config`
+
+### 🔧 Implementação Técnica
+- Função `isServerPlaybook()` para verificação consistente
+- Exceção aplicada em filtros de sistema e grupo
+- Código limpo e reutilizável
+- Performance otimizada com verificação prévia
+
+### 🎨 Interface
+- **Botão de execução** com maior destaque visual
+- **Cor de fundo verde** (`bg-green-600`) para identificação
+- **Sombra e hover** para melhor interatividade
+- **Ícone preenchido** para maior visibilidade
+
 ## [1.0.0-beta.1] - 2025-10-08
 
 ### 🚀 Primeira versão Beta - Pronta para Produção
