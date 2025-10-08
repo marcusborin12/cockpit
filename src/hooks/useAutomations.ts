@@ -40,7 +40,6 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         page_size: 500, // Busca muitos templates
       });
 
-      console.log('📋 Job Templates carregados:', response.results.map(t => t.name));
       setAllJobTemplates(response.results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar job templates');
@@ -53,13 +52,6 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
   // Aplica filtros localmente
   const getFilteredJobTemplates = () => {
     let templates = [...allJobTemplates];
-    
-    console.log('🔍 Iniciando filtros com:', {
-      totalTemplates: templates.length,
-      systemSigla: filters?.systemSigla,
-      selectedGroup: filters?.selectedGroup,
-      searchTerm: filters?.searchTerm
-    });
 
     // IMPORTANTE: Job templates não têm sistema no nome, apenas tecnologia
     // Padrão real: area-TECNOLOGIA-ação (ex: gsti-api-healthcheck)
@@ -69,23 +61,17 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
     // Filtro por sistema - mostra todos os templates quando um sistema é selecionado
     // (O sistema é usado apenas para filtrar inventários/grupos/servidores)
     if (filters?.systemSigla && filters.systemSigla.trim() && filters.systemSigla !== 'all') {
-      const selectedSystem = filters.systemSigla.toLowerCase();
-      console.log('🎯 Sistema selecionado:', selectedSystem, '- Mostrando todas as tecnologias + exceções');
-      
       // Quando há sistema selecionado, mostra TODOS os templates
       // (o filtro real será feito pelos grupos/tecnologias)
-      console.log('✅ Sistema filtrado - mantendo todos os templates para seleção de tecnologia');
     }
 
     // Filtro por grupo/tecnologia com exceção para playbooks "-server-"
     if (filters?.selectedGroup && filters.selectedGroup.trim() && filters.selectedGroup !== '__all__') {
       const selectedGroup = filters.selectedGroup.toLowerCase();
-      console.log('🎯 Aplicando filtro de tecnologia:', selectedGroup);
       
       templates = templates.filter(template => {
         // EXCEÇÃO: Playbooks com "-server-" sempre aparecem
         if (isServerPlaybook(template.name)) {
-          console.log('🔓 Exceção aplicada para playbook server (tecnologia):', template.name);
           return true;
         }
         
@@ -93,22 +79,16 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         const nameParts = template.name.toLowerCase().split('-');
         if (nameParts.length >= 2) {
           const technologyPart = nameParts[1];
-          const matchesTechnology = technologyPart === selectedGroup;
-          console.log(`🔍 Analisando template: ${template.name} | Tecnologia esperada: ${selectedGroup} | Tecnologia encontrada: ${technologyPart} | Match: ${matchesTechnology}`);
-          return matchesTechnology;
+          return technologyPart === selectedGroup;
         }
         
-        console.log(`❌ Template ignorado (formato inválido): ${template.name}`);
         return false;
       });
-      
-      console.log('📊 Após filtro de tecnologia:', templates.length, 'templates restantes');
     }
 
     // Filtro de busca textual
     if (filters?.searchTerm && filters.searchTerm.trim()) {
       const searchLower = filters.searchTerm.toLowerCase().trim();
-      console.log('🎯 Aplicando filtro de busca:', searchLower);
       
       templates = templates.filter(template => {
         // Busca no nome do template
@@ -122,21 +102,9 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         const nameParts = template.name.toLowerCase().split('-');
         const partMatch = nameParts.some(part => part.includes(searchLower));
         
-        const matches = nameMatch || descriptionMatch || partMatch;
-        if (matches) {
-          console.log('🔍 Template passou no filtro de busca:', template.name);
-        }
-        
-        return matches;
+        return nameMatch || descriptionMatch || partMatch;
       });
-      
-      console.log('📊 Após filtro de busca:', templates.length, 'templates restantes');
     }
-
-    console.log('🏁 Resultado final do filtro:', {
-      totalTemplates: templates.length,
-      templateNames: templates.map(t => t.name)
-    });
 
     return templates;
   };
@@ -173,28 +141,18 @@ export const useSystems = () => {
       // Padrão: área-sistema-ambiente-inventario (ex: gsti-spi-producao-inventario)
       const systemsSet = new Set<string>();
       
-      console.log('📋 Inventários encontrados:', response.results.map(inv => inv.name));
-      
       response.results.forEach(inventory => {
         const parts = inventory.name.split('-');
-        console.log(`🔍 Analisando inventário: ${inventory.name} | Partes: [${parts.join(', ')}]`);
-        
         if (parts.length >= 2) {
           const system = parts[1].toUpperCase(); // Segunda parte é o sistema
           systemsSet.add(system);
-          console.log(`✅ Sistema extraído: ${system}`);
-        } else {
-          console.log(`❌ Inventário ignorado (formato inválido): ${inventory.name}`);
         }
       });
 
       // Converte para array e ordena
       const systemsList = Array.from(systemsSet).sort();
       setSystems(systemsList);
-
-      console.log('🎯 Sistemas finais extraídos dos inventários:', systemsList);
     } catch (err) {
-      console.error('❌ Erro ao buscar sistemas dos inventários:', err);
       setError(err instanceof Error ? err.message : 'Erro ao buscar sistemas');
       setSystems([]);
     } finally {
@@ -338,10 +296,7 @@ export const useServers = (systemSigla?: string, selectedGroup?: string) => {
       // Remove duplicatas e ordena
       const uniqueServers = Array.from(new Set(serverNames)).sort();
       setServers(uniqueServers);
-
-      console.log('🖥️ Servidores encontrados:', uniqueServers);
     } catch (err) {
-      console.error('❌ Erro ao buscar servidores:', err);
       setError(err instanceof Error ? err.message : 'Erro ao buscar servidores');
       setServers([]);
     } finally {

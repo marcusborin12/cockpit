@@ -2,6 +2,50 @@
 
 Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
+## [1.0.0-beta.3] - 2025-10-08
+
+### 🔧 CORREÇÃO CRÍTICA - Sistema de Filtros
+
+### 🐛 Problemas Corrigidos
+- **Correção do filtro de Sistema** - Agora funciona corretamente
+- **Padrão de nomenclatura identificado** - `area-TECNOLOGIA-ação` (não `area-SISTEMA-tecnologia`)
+- **Lógica de filtro ajustada** para o padrão real dos job templates
+- **Exceção para playbooks "-server-"** mantida e funcional
+
+### 🎯 Comportamento Corrigido
+
+**ANTES (com bug):**
+- Filtro Sistema "SPI" → Mostrava apenas playbooks "-server-"
+- Filtro Grupo "api" → Não funcionava corretamente
+
+**DEPOIS (corrigido):**
+- Filtro Sistema "SPI" → Mostra **TODOS** os templates disponíveis
+- Filtro Grupo "api" → Mostra `gsti-api-healthcheck` + playbooks "-server-"
+- Filtro Grupo "iis" → Mostra `gsti-iis-healthcheck` + playbooks "-server-"
+
+### 📋 Padrão Real Identificado
+```
+Job Templates encontrados:
+- gsti-api-healthcheck
+- gsti-ibmmq-healthcheck  
+- gsti-iis-healthcheck
+- gsti-oneagent-healthcheck
+- gsti-redis-healthcheck
+- gsti-server-healthcheck (exceção)
+- gsti-tomcat-healthcheck
+- gsti-workers-healthcheck
+- testa-portas
+```
+
+### 🔓 Exceções Mantidas
+- Playbooks com "-server-" continuam aparecendo sempre
+- `gsti-server-healthcheck` visível em qualquer filtro
+
+### 🧹 Limpeza de Código
+- **Removidos logs de debug** para produção
+- **Código otimizado** e limpo
+- **Performance melhorada** sem logs excessivos
+
 ## [1.0.0-beta.2] - 2025-10-08
 
 ### 🔓 Exceção de Filtros para Playbooks SERVER

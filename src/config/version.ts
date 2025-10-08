@@ -1,5 +1,5 @@
 export const VERSION_INFO = {
-  version: '1.0.0-beta.2',
+  version: '1.0.0-beta.3',
   buildDate: new Date().toISOString().split('T')[0],
   environment: import.meta.env.VITE_ENVIRONMENT || 'development',
   features: [
