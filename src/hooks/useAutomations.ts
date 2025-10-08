@@ -40,6 +40,7 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         page_size: 500, // Busca muitos templates
       });
 
+      console.log('📋 Job Templates carregados:', response.results.map(t => t.name));
       setAllJobTemplates(response.results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar job templates');
