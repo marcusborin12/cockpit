@@ -52,10 +52,19 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
   // Aplica filtros localmente
   const getFilteredJobTemplates = () => {
     let templates = [...allJobTemplates];
+    
+    console.log('🔍 Iniciando filtros com:', {
+      totalTemplates: templates.length,
+      systemSigla: filters?.systemSigla,
+      selectedGroup: filters?.selectedGroup,
+      searchTerm: filters?.searchTerm
+    });
 
     // Filtro por sistema com exceção para playbooks "-server-"
     if (filters?.systemSigla && filters.systemSigla.trim() && filters.systemSigla !== 'all') {
       const selectedSystem = filters.systemSigla.toLowerCase();
+      console.log('🎯 Aplicando filtro de sistema:', selectedSystem);
+      
       templates = templates.filter(template => {
         // EXCEÇÃO: Playbooks com "-server-" sempre aparecem
         if (isServerPlaybook(template.name)) {
@@ -68,18 +77,21 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         if (nameParts.length >= 2) {
           const systemPart = nameParts[1];
           const matchesSystem = systemPart === selectedSystem;
-          if (matchesSystem) {
-            console.log('✅ Template passou no filtro de sistema:', template.name);
-          }
+          console.log(`🔍 Analisando template: ${template.name} | Sistema esperado: ${selectedSystem} | Sistema encontrado: ${systemPart} | Match: ${matchesSystem}`);
           return matchesSystem;
         }
+        console.log(`❌ Template ignorado (formato inválido): ${template.name}`);
         return false;
       });
+      
+      console.log('📊 Após filtro de sistema:', templates.length, 'templates restantes');
     }
 
     // Filtro por grupo/tecnologia com exceção para playbooks "-server-"
     if (filters?.selectedGroup && filters.selectedGroup.trim() && filters.selectedGroup !== '__all__') {
       const selectedGroup = filters.selectedGroup.toLowerCase();
+      console.log('🎯 Aplicando filtro de grupo:', selectedGroup);
+      
       templates = templates.filter(template => {
         // EXCEÇÃO: Playbooks com "-server-" sempre aparecem
         if (isServerPlaybook(template.name)) {
@@ -89,16 +101,18 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         
         // Filtro normal por grupo
         const matchesGroup = template.name.toLowerCase().includes(`-${selectedGroup}-`);
-        if (matchesGroup) {
-          console.log('✅ Template passou no filtro de grupo:', template.name);
-        }
+        console.log(`🔍 Analisando template: ${template.name} | Grupo esperado: ${selectedGroup} | Match: ${matchesGroup}`);
         return matchesGroup;
       });
+      
+      console.log('📊 Após filtro de grupo:', templates.length, 'templates restantes');
     }
 
     // Filtro de busca textual
     if (filters?.searchTerm && filters.searchTerm.trim()) {
       const searchLower = filters.searchTerm.toLowerCase().trim();
+      console.log('🎯 Aplicando filtro de busca:', searchLower);
+      
       templates = templates.filter(template => {
         // Busca no nome do template
         const nameMatch = template.name.toLowerCase().includes(searchLower);
@@ -111,9 +125,21 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
         const nameParts = template.name.toLowerCase().split('-');
         const partMatch = nameParts.some(part => part.includes(searchLower));
         
-        return nameMatch || descriptionMatch || partMatch;
+        const matches = nameMatch || descriptionMatch || partMatch;
+        if (matches) {
+          console.log('🔍 Template passou no filtro de busca:', template.name);
+        }
+        
+        return matches;
       });
+      
+      console.log('📊 Após filtro de busca:', templates.length, 'templates restantes');
     }
+
+    console.log('🏁 Resultado final do filtro:', {
+      totalTemplates: templates.length,
+      templateNames: templates.map(t => t.name)
+    });
 
     return templates;
   };
@@ -150,11 +176,18 @@ export const useSystems = () => {
       // Padrão: área-sistema-ambiente-inventario (ex: gsti-spi-producao-inventario)
       const systemsSet = new Set<string>();
       
+      console.log('📋 Inventários encontrados:', response.results.map(inv => inv.name));
+      
       response.results.forEach(inventory => {
         const parts = inventory.name.split('-');
+        console.log(`🔍 Analisando inventário: ${inventory.name} | Partes: [${parts.join(', ')}]`);
+        
         if (parts.length >= 2) {
           const system = parts[1].toUpperCase(); // Segunda parte é o sistema
           systemsSet.add(system);
+          console.log(`✅ Sistema extraído: ${system}`);
+        } else {
+          console.log(`❌ Inventário ignorado (formato inválido): ${inventory.name}`);
         }
       });
 
@@ -162,7 +195,7 @@ export const useSystems = () => {
       const systemsList = Array.from(systemsSet).sort();
       setSystems(systemsList);
 
-      console.log('🔍 Sistemas extraídos dos inventários:', systemsList);
+      console.log('🎯 Sistemas finais extraídos dos inventários:', systemsList);
     } catch (err) {
       console.error('❌ Erro ao buscar sistemas dos inventários:', err);
       setError(err instanceof Error ? err.message : 'Erro ao buscar sistemas');
