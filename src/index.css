@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 217 100% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 217 100% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 100% 20%;
+
+    --primary: 199 100% 47%;    /* Azul Crefisa #00B0F0 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 191 26% 21%;  /* Azul secundário */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 217 10% 50%;
+
+    --accent: 199 100% 47%;    /* Mantendo consistência com a marca */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 199 100% 47%;    /* Azul Crefisa #00B0F0 */
+
+    --radius: 1rem;
+    
+    --success: 160 85% 29%;    /* Novo verde mais sóbrio #0A8758 */
+    --warning: 38 92% 50%;     /* Mantendo amarelo de alerta */
+    --info: 201 100% 39%;      /* Azul info #0090C8 */
+    
+    --gradient-primary: linear-gradient(135deg, hsl(191 26% 11%), hsl(191 26% 21%));
+    --gradient-secondary: linear-gradient(135deg, hsl(191 26% 21%), hsl(191 26% 31%));
+    --shadow-card: 0 2px 8px -2px hsl(217 100% 20% / 0.1);
+    --shadow-elevated: 0 8px 24px -4px hsl(217 100% 20% / 0.15);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 217 100% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 217 100% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 217 100% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 199 100% 47%;    /* Azul Crefisa #00B0F0 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 191 26% 21%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 217 100% 15%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 199 100% 47%;    /* Mantendo consistência com a marca */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 100% 20%;
+    --input: 217 100% 20%;
+    --ring: 199 100% 47%;    /* Azul Crefisa #00B0F0 */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-foreground;
+  }
+}
