@@ -145,11 +145,13 @@ const JobExecutionModalComponent = ({
       console.log('Inventário encontrado:', inventory.name);
 
       // Busca hosts reais do inventário, agrupados por grupos
-      console.log('🎯 Parâmetros de busca:', {
+      console.log('🎯 Parâmetros de busca recebidos do filtro:', {
+        systemSigla: currentFilters?.systemSigla,
+        selectedGroup: currentFilters?.selectedGroup,
         inventoryId: inventory.id,
         inventoryName: inventory.name,
-        selectedGroup: currentFilters?.selectedGroup,
-        filterActive: currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__'
+        filterActive: currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__',
+        willFilterByGroup: currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' ? currentFilters.selectedGroup : 'Não (todos os grupos)'
       });
       
       const realHostsByGroups = await awxService.getInventoryHostsByGroups(

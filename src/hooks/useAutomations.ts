@@ -46,7 +46,7 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
     let templates = [...allJobTemplates];
 
     // Filtro por grupo/tecnologia
-    if (filters?.selectedGroup && filters.selectedGroup.trim()) {
+    if (filters?.selectedGroup && filters.selectedGroup.trim() && filters.selectedGroup !== '__all__') {
       const selectedGroup = filters.selectedGroup.toLowerCase();
       templates = templates.filter(template => 
         template.name.toLowerCase().includes(`-${selectedGroup}-`)
@@ -226,7 +226,7 @@ export const useAutomations = () => {
   const [filters, setFilters] = useState<AutomationFilters>({
     systemSigla: 'all',
     selectedInventory: '',
-    selectedGroup: '',
+    selectedGroup: '__all__',
     searchTerm: '',
   });
 
@@ -242,18 +242,16 @@ export const useAutomations = () => {
       // Reset campos dependentes quando sistema muda
       if (key === 'systemSigla') {
         newFilters.selectedInventory = '';
-        newFilters.selectedGroup = '';
+        newFilters.selectedGroup = '__all__';
       }
       
       // Reset grupo quando inventário muda
       if (key === 'selectedInventory') {
-        newFilters.selectedGroup = '';
+        newFilters.selectedGroup = '__all__';
       }
 
-      // Converte "__all__" para string vazia para compatibilidade
-      if (key === 'selectedGroup' && value === '__all__') {
-        newFilters.selectedGroup = '';
-      }
+      // Mantém "__all__" como está para compatibilidade com JobExecutionModal
+      // Não converte para string vazia
       
       return newFilters;
     });
@@ -263,7 +261,7 @@ export const useAutomations = () => {
     setFilters({
       systemSigla: 'all',
       selectedInventory: '',
-      selectedGroup: '',
+      selectedGroup: '__all__',
       searchTerm: '',
     });
   };

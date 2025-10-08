@@ -282,6 +282,11 @@ const Automations = () => {
                     <Button 
                       className="w-full gap-2"
                       onClick={() => {
+                        console.log('🚀 Abrindo modal de execução com filtros:', {
+                          systemSigla: filters.systemSigla,
+                          selectedGroup: filters.selectedGroup,
+                          template: template.name
+                        });
                         setSelectedJobTemplate(template);
                         setIsExecutionModalOpen(true);
                       }}
