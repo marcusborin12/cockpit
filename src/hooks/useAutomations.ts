@@ -16,6 +16,13 @@ export interface InventoryItem {
   description?: string;
 }
 
+// Função para verificar se é um playbook server (exceção aos filtros)
+// Regra de negócio: Playbooks com "-server-" no nome devem sempre aparecer,
+// independente dos filtros de sistema ou grupo aplicados
+const isServerPlaybook = (templateName: string): boolean => {
+  return templateName.toLowerCase().includes('-server-');
+};
+
 // Hook para buscar job templates
 export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
   const [allJobTemplates, setAllJobTemplates] = useState<AWXJobTemplate[]>([]);
@@ -46,12 +53,39 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
   const getFilteredJobTemplates = () => {
     let templates = [...allJobTemplates];
 
-    // Filtro por grupo/tecnologia
+    // Filtro por sistema com exceção para playbooks "-server-"
+    if (filters?.systemSigla && filters.systemSigla.trim() && filters.systemSigla !== 'all') {
+      const selectedSystem = filters.systemSigla.toLowerCase();
+      templates = templates.filter(template => {
+        // EXCEÇÃO: Playbooks com "-server-" sempre aparecem
+        if (isServerPlaybook(template.name)) {
+          console.log('🔓 Exceção aplicada para playbook server (sistema):', template.name);
+          return true;
+        }
+        
+        // Filtro normal por sistema (segunda parte do nome: area-SISTEMA-tecnologia)
+        const nameParts = template.name.toLowerCase().split('-');
+        if (nameParts.length >= 2) {
+          const systemPart = nameParts[1];
+          return systemPart === selectedSystem;
+        }
+        return false;
+      });
+    }
+
+    // Filtro por grupo/tecnologia com exceção para playbooks "-server-"
     if (filters?.selectedGroup && filters.selectedGroup.trim() && filters.selectedGroup !== '__all__') {
       const selectedGroup = filters.selectedGroup.toLowerCase();
-      templates = templates.filter(template => 
-        template.name.toLowerCase().includes(`-${selectedGroup}-`)
-      );
+      templates = templates.filter(template => {
+        // EXCEÇÃO: Playbooks com "-server-" sempre aparecem
+        if (isServerPlaybook(template.name)) {
+          console.log('🔓 Exceção aplicada para playbook server (grupo):', template.name);
+          return true;
+        }
+        
+        // Filtro normal por grupo
+        return template.name.toLowerCase().includes(`-${selectedGroup}-`);
+      });
     }
 
     // Filtro de busca textual
