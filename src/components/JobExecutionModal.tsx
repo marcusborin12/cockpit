@@ -114,37 +114,35 @@ const JobExecutionModalComponent = ({
   const [jobError, setJobError] = useState<string>('');
   const [servers, setServers] = useState<{ [group: string]: string[] }>({});
   const [loadingServers, setLoadingServers] = useState(false);
+  const [inventoryInfo, setInventoryInfo] = useState<{ id: number; name: string } | null>(null);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastJobHashRef = useRef<string>('');
 
   // Função para buscar servidores do inventário
   const fetchServersFromInventory = useCallback(async () => {
-    if (!currentFilters?.systemSigla || currentFilters.systemSigla === 'all') {
-      // Se não há sistema específico, mostra exemplo estático
-      setServers({
-        'web': ['srv-web-01', 'srv-web-02', 'srv-web-03'],
-        'app': ['srv-app-01', 'srv-app-02'],
-        'db': ['srv-db-01'],
-        'cache': ['srv-cache-01']
-      });
-      return;
-    }
-
     setLoadingServers(true);
+    
     try {
-      // Busca inventários do sistema
-      const inventories = await awxService.getInventoriesBySystem(currentFilters.systemSigla);
+      // Busca o inventário adequado para execução (mesma lógica do AWX service)
+      const inventory = await awxService.getInventoryForExecution(
+        currentFilters?.systemSigla && currentFilters.systemSigla !== 'all' 
+          ? currentFilters.systemSigla 
+          : undefined
+      );
       
-      if (inventories.length === 0) {
-        console.warn('Nenhum inventário encontrado para o sistema:', currentFilters.systemSigla);
-        setServers({});
+      if (!inventory) {
+        console.warn('Nenhum inventário encontrado');
+        setInventoryInfo(null);
+        setServers({
+          'exemplo': ['Nenhum inventário encontrado']
+        });
         return;
       }
 
-      // Pega o primeiro inventário do sistema (produção, normalmente)
-      const inventory = inventories[0];
-      console.log('Buscando hosts do inventário:', inventory.name);
+      // Armazena informações do inventário
+      setInventoryInfo(inventory);
+      console.log('Inventário encontrado:', inventory.name);
 
       // Busca grupos do inventário
       const groupsResponse = await awxService.getInventoryGroups(inventory.id);
@@ -153,7 +151,10 @@ const JobExecutionModalComponent = ({
       // Para cada grupo, gera servidores baseado no nome do grupo
       for (const group of groupsResponse.results) {
         if (group.name && group.name !== 'all') {
-          const systemPrefix = currentFilters.systemSigla.toLowerCase();
+          // Extrai sistema do nome do inventário se possível
+          const inventoryParts = inventory.name.toLowerCase().split('-');
+          const systemPrefix = inventoryParts.length >= 2 ? inventoryParts[1] : 
+                              (currentFilters?.systemSigla?.toLowerCase() || 'sys');
           const groupName = group.name.toLowerCase();
           
           // Gera lista de servidores baseada no padrão do grupo
@@ -169,9 +170,10 @@ const JobExecutionModalComponent = ({
         }
       }
 
-      // Se não encontrou servidores, cria exemplo baseado no sistema
+      // Se não encontrou grupos, cria exemplo baseado no inventário
       if (Object.keys(serversByGroup).length === 0) {
-        const systemPrefix = currentFilters.systemSigla.toLowerCase();
+        const inventoryParts = inventory.name.toLowerCase().split('-');
+        const systemPrefix = inventoryParts.length >= 2 ? inventoryParts[1] : 'sys';
         serversByGroup['web'] = [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`];
         serversByGroup['app'] = [`${systemPrefix}-app-01`];
       }
@@ -179,12 +181,10 @@ const JobExecutionModalComponent = ({
       setServers(serversByGroup);
     } catch (error) {
       console.error('Erro ao buscar servidores do inventário:', error);
-      // Em caso de erro, mostra servidores exemplo
-      const systemPrefix = currentFilters?.systemSigla?.toLowerCase() || 'sys';
+      // Em caso de erro, mostra informação de erro
+      setInventoryInfo(null);
       setServers({
-        'web': [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`],
-        'app': [`${systemPrefix}-app-01`],
-        'db': [`${systemPrefix}-db-01`]
+        'erro': ['Erro ao conectar com o inventory']
       });
     } finally {
       setLoadingServers(false);
@@ -365,6 +365,7 @@ const JobExecutionModalComponent = ({
         setJobError('');
         setServers({});
         setLoadingServers(false);
+        setInventoryInfo(null);
         lastJobHashRef.current = '';
       }, 0);
     }
@@ -421,14 +422,14 @@ const JobExecutionModalComponent = ({
               <div className="space-y-1">
                 <h4 className="font-medium text-sm text-muted-foreground">Inventário</h4>
                 <Badge variant="outline" className="text-xs">
-                  {(() => {
-                    if (currentFilters?.systemSigla && currentFilters.systemSigla !== 'all') {
-                      const area = nameParts[0]?.toLowerCase() || 'gsti';
-                      const system = currentFilters.systemSigla.toLowerCase();
-                      return `${area}-${system}-producao-inventario`;
-                    }
-                    return 'Seleção automática';
-                  })()}
+                  {loadingServers ? (
+                    <span className="flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      Carregando...
+                    </span>
+                  ) : (
+                    inventoryInfo?.name || 'Não encontrado'
+                  )}
                 </Badge>
               </div>
             </div>
@@ -516,15 +517,15 @@ const JobExecutionModalComponent = ({
                 {!loadingServers && Object.keys(servers).length > 0 && (
                   <div className="mt-3 pt-3 border-t">
                     <p className="text-xs text-muted-foreground">
-                      {currentFilters?.systemSigla && currentFilters.systemSigla !== 'all' ? (
+                      {inventoryInfo ? (
                         <>
-                          Servidores do inventário <strong>{currentFilters.systemSigla}</strong>
-                          {currentFilters.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
+                          Servidores do inventário <strong>{inventoryInfo.name}</strong>
+                          {currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' && (
                             <span> - grupo <strong>{currentFilters.selectedGroup}</strong></span>
                           )}
                         </>
                       ) : (
-                        'Servidores de exemplo (selecione um sistema para ver o inventário real)'
+                        'Inventário não encontrado ou erro na conexão'
                       )}
                     </p>
                   </div>
