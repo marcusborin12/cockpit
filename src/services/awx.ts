@@ -513,6 +513,7 @@ class AWXService {
     options?: {
       systemSigla?: string;
       selectedGroup?: string;
+      selectedServer?: string;
     }
   ): Promise<AWXJob> {
     const endpoint = buildAwxUrl(AWX_CONFIG.ENDPOINTS.JOB_LAUNCHES, { id: templateId });
@@ -529,17 +530,34 @@ class AWXService {
       extra_vars: extraVars || {},
     };
 
-    // Se há um grupo selecionado, adiciona como limit
-    if (options?.selectedGroup && options.selectedGroup !== '__all__') {
+    // Define o limit baseado nos filtros aplicados
+    // Regras:
+    // 1. Servidor específico → limit = nome do servidor
+    // 2. Todos os servidores de um grupo → limit = nome do grupo  
+    // 3. Sem filtros específicos → sem limit (todo inventário)
+    if (options?.selectedServer && options.selectedServer !== '__all__') {
+      // Servidor específico selecionado: limit = nome do servidor
+      launchData.limit = options.selectedServer;
+      console.log('🎯 Executando com limite de servidor específico:', options.selectedServer);
+    } else if (options?.selectedGroup && options.selectedGroup !== '__all__') {
+      // Grupo específico mas todos os servidores: limit = nome do grupo
       launchData.limit = options.selectedGroup;
-      console.log('🎯 Executando com limite de grupo:', options.selectedGroup);
+      console.log('🎯 Executando com limite de grupo (todos os servidores):', options.selectedGroup);
     }
+    // Se não há filtros específicos, executa em todo o inventário (sem limit)
 
     console.log('🚀 Executando job template:', {
       templateId,
       inventoryId: inventory.id,
       inventoryName: inventory.name,
       limit: launchData.limit,
+      limitType: options?.selectedServer && options.selectedServer !== '__all__' 
+        ? 'servidor específico' 
+        : options?.selectedGroup && options.selectedGroup !== '__all__' 
+          ? 'grupo específico' 
+          : 'todo inventário',
+      filterServer: options?.selectedServer,
+      filterGroup: options?.selectedGroup,
       extraVars: extraVars || {}
     });
     

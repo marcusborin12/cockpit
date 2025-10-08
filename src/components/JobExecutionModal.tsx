@@ -375,13 +375,31 @@ const JobExecutionModalComponent = ({
       setIsExecuting(true);
       setExecutionResult(null);
 
-      console.log('🎯 Iniciando execução do job template:', jobTemplate.id);
+      // Determina qual será o limit aplicado
+      let limitInfo = 'todo inventário (sem limit)';
+      if (currentFilters?.selectedServer && currentFilters.selectedServer !== '__all__') {
+        limitInfo = `servidor específico: ${currentFilters.selectedServer}`;
+      } else if (currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__') {
+        limitInfo = `grupo específico: ${currentFilters.selectedGroup}`;
+      }
+
+      console.log('🎯 Iniciando execução do job template:', {
+        templateId: jobTemplate.id,
+        limitWillBe: limitInfo,
+        filters: {
+          sistema: currentFilters?.systemSigla,
+          grupo: currentFilters?.selectedGroup,
+          servidor: currentFilters?.selectedServer
+        }
+      });
+
       const job = await awxService.launchJobTemplate(
         jobTemplate.id,
         {}, // extra_vars vazias por padrão
         {
           systemSigla: currentFilters?.systemSigla || 'all',
           selectedGroup: currentFilters?.selectedGroup || '',
+          selectedServer: currentFilters?.selectedServer || '',
         }
       );
       
