@@ -22,6 +22,7 @@ const Automations = () => {
     systems,
     inventories,
     groups,
+    servers,
     jobTemplates,
     isLoading,
     hasError,
@@ -124,6 +125,25 @@ const Automations = () => {
               </SelectContent>
             </Select>
 
+            {/* Servidor */}
+            <Select 
+              value={filters.selectedServer} 
+              onValueChange={(value) => updateFilter('selectedServer', value)}
+              disabled={filters.systemSigla === 'all' || filters.selectedGroup === '__all__' || servers.loading}
+            >
+              <SelectTrigger className="w-full sm:w-[180px] h-11">
+                <SelectValue placeholder="Selecionar servidor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todos os servidores</SelectItem>
+                {servers.servers.map((server) => (
+                  <SelectItem key={server} value={server}>
+                    {server}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             {/* Actions */}
             <div className="flex gap-2">
               <Button 
@@ -152,7 +172,7 @@ const Automations = () => {
           </div>
 
           {/* Filter Summary */}
-          {(filters.systemSigla !== 'all' || filters.selectedGroup || filters.searchTerm) && (
+          {(filters.systemSigla !== 'all' || filters.selectedGroup || filters.selectedServer || filters.searchTerm) && (
             <div className="flex flex-wrap gap-2">
               {filters.systemSigla !== 'all' && (
                 <Badge variant="secondary" className="gap-1">
@@ -160,10 +180,16 @@ const Automations = () => {
                   Sistema: {filters.systemSigla}
                 </Badge>
               )}
-              {filters.selectedGroup && (
+              {filters.selectedGroup && filters.selectedGroup !== '__all__' && (
                 <Badge variant="secondary" className="gap-1">
                   <Settings className="w-3 h-3" />
                   Grupo: {filters.selectedGroup.toUpperCase()}
+                </Badge>
+              )}
+              {filters.selectedServer && filters.selectedServer !== '__all__' && (
+                <Badge variant="secondary" className="gap-1">
+                  <Settings className="w-3 h-3" />
+                  Servidor: {filters.selectedServer}
                 </Badge>
               )}
               {filters.searchTerm && (
@@ -312,7 +338,8 @@ const Automations = () => {
         jobTemplate={selectedJobTemplate}
         currentFilters={{
           systemSigla: filters.systemSigla,
-          selectedGroup: filters.selectedGroup
+          selectedGroup: filters.selectedGroup,
+          selectedServer: filters.selectedServer
         }}
         onExecutionStarted={(jobId) => {
           console.log('Job iniciado:', jobId);

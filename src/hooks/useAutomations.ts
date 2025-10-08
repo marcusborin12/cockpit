@@ -6,6 +6,7 @@ export interface AutomationFilters {
   systemSigla: string;
   selectedInventory: string;
   selectedGroup: string;
+  selectedServer: string;
   searchTerm: string;
 }
 
@@ -221,18 +222,87 @@ export const useGroups = (systemSigla?: string) => {
   };
 };
 
+// Hook para buscar servidores por sistema e grupo
+export const useServers = (systemSigla?: string, selectedGroup?: string) => {
+  const [servers, setServers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchServers = async () => {
+    if (!systemSigla || systemSigla === 'all' || !selectedGroup || selectedGroup === '__all__') {
+      setServers([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Busca inventários do sistema
+      const inventoriesList = await awxService.getInventoriesBySystem(systemSigla);
+      
+      if (inventoriesList.length === 0) {
+        setServers([]);
+        return;
+      }
+
+      // Usa o primeiro inventário encontrado
+      const inventory = inventoriesList[0];
+      
+      // Busca servidores do grupo específico
+      const serversData = await awxService.getInventoryHostsByGroups(
+        inventory.id, 
+        selectedGroup
+      );
+
+      // Extrai nomes dos servidores
+      const serverNames: string[] = [];
+      Object.values(serversData).forEach(hosts => {
+        if (Array.isArray(hosts)) {
+          serverNames.push(...hosts);
+        }
+      });
+
+      // Remove duplicatas e ordena
+      const uniqueServers = Array.from(new Set(serverNames)).sort();
+      setServers(uniqueServers);
+
+      console.log('🖥️ Servidores encontrados:', uniqueServers);
+    } catch (err) {
+      console.error('❌ Erro ao buscar servidores:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao buscar servidores');
+      setServers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServers();
+  }, [systemSigla, selectedGroup]);
+
+  return {
+    servers,
+    loading,
+    error,
+    refetch: fetchServers,
+  };
+};
+
 // Hook principal que combina todos os dados
 export const useAutomations = () => {
   const [filters, setFilters] = useState<AutomationFilters>({
     systemSigla: 'all',
     selectedInventory: '',
     selectedGroup: '__all__',
+    selectedServer: '__all__',
     searchTerm: '',
   });
 
   const systems = useSystems();
   const inventories = useInventories(filters.systemSigla);
   const groups = useGroups(filters.systemSigla);
+  const servers = useServers(filters.systemSigla, filters.selectedGroup);
   const jobTemplates = useJobTemplates(filters);
 
   const updateFilter = (key: keyof AutomationFilters, value: string) => {
@@ -243,11 +313,18 @@ export const useAutomations = () => {
       if (key === 'systemSigla') {
         newFilters.selectedInventory = '';
         newFilters.selectedGroup = '__all__';
+        newFilters.selectedServer = '__all__';
       }
       
       // Reset grupo quando inventário muda
       if (key === 'selectedInventory') {
         newFilters.selectedGroup = '__all__';
+        newFilters.selectedServer = '__all__';
+      }
+
+      // Reset servidor quando grupo muda
+      if (key === 'selectedGroup') {
+        newFilters.selectedServer = '__all__';
       }
 
       // Mantém "__all__" como está para compatibilidade com JobExecutionModal
@@ -262,6 +339,7 @@ export const useAutomations = () => {
       systemSigla: 'all',
       selectedInventory: '',
       selectedGroup: '__all__',
+      selectedServer: '__all__',
       searchTerm: '',
     });
   };
@@ -273,8 +351,9 @@ export const useAutomations = () => {
     systems,
     inventories,
     groups,
+    servers,
     jobTemplates,
-    isLoading: systems.loading || inventories.loading || groups.loading || jobTemplates.loading,
-    hasError: !!(systems.error || inventories.error || groups.error || jobTemplates.error),
+    isLoading: systems.loading || inventories.loading || groups.loading || servers.loading || jobTemplates.loading,
+    hasError: !!(systems.error || inventories.error || groups.error || servers.error || jobTemplates.error),
   };
 };

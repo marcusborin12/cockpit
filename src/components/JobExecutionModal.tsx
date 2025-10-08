@@ -93,6 +93,7 @@ interface JobExecutionModalProps {
   currentFilters?: {
     systemSigla: string;
     selectedGroup: string;
+    selectedServer: string;
   };
 }
 
@@ -148,10 +149,13 @@ const JobExecutionModalComponent = ({
       console.log('🎯 Parâmetros de busca recebidos do filtro:', {
         systemSigla: currentFilters?.systemSigla,
         selectedGroup: currentFilters?.selectedGroup,
+        selectedServer: currentFilters?.selectedServer,
         inventoryId: inventory.id,
         inventoryName: inventory.name,
-        filterActive: currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__',
-        willFilterByGroup: currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' ? currentFilters.selectedGroup : 'Não (todos os grupos)'
+        filterGroupActive: currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__',
+        filterServerActive: currentFilters?.selectedServer && currentFilters.selectedServer !== '__all__',
+        willFilterByGroup: currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__' ? currentFilters.selectedGroup : 'Não (todos os grupos)',
+        willFilterByServer: currentFilters?.selectedServer && currentFilters.selectedServer !== '__all__' ? currentFilters.selectedServer : 'Não (todos os servidores)'
       });
       
       const realHostsByGroups = await awxService.getInventoryHostsByGroups(
@@ -163,7 +167,28 @@ const JobExecutionModalComponent = ({
 
       if (Object.keys(realHostsByGroups).length > 0) {
         console.log('✅ Hosts reais encontrados:', realHostsByGroups);
-        setServers(realHostsByGroups);
+        
+        // Aplica filtro de servidor específico se selecionado
+        let filteredServers = realHostsByGroups;
+        if (currentFilters?.selectedServer && currentFilters.selectedServer !== '__all__') {
+          console.log('🎯 Aplicando filtro de servidor específico:', currentFilters.selectedServer);
+          
+          filteredServers = {};
+          Object.entries(realHostsByGroups).forEach(([groupName, hosts]) => {
+            const filteredHosts = hosts.filter(host => 
+              host.toLowerCase().includes(currentFilters.selectedServer.toLowerCase()) ||
+              currentFilters.selectedServer.toLowerCase().includes(host.toLowerCase())
+            );
+            
+            if (filteredHosts.length > 0) {
+              filteredServers[groupName] = filteredHosts;
+            }
+          });
+          
+          console.log('🔍 Servidores filtrados:', filteredServers);
+        }
+        
+        setServers(filteredServers);
       } else {
         console.log('⚠️ Nenhum host real encontrado. Gerando fallback...');
         
@@ -177,19 +202,50 @@ const JobExecutionModalComponent = ({
         if (currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__') {
           const groupName = currentFilters.selectedGroup.toLowerCase();
           const serverCount = groupName === 'web' ? 3 : groupName === 'app' ? 2 : 1;
-          const groupServers = [];
+          let groupServers = [];
           
           for (let i = 1; i <= serverCount; i++) {
             groupServers.push(`${systemPrefix}-${groupName}-${String(i).padStart(2, '0')}`);
           }
-          fallbackServers[currentFilters.selectedGroup] = groupServers;
-          console.log(`📝 Fallback gerado para grupo ${currentFilters.selectedGroup}:`, groupServers);
+          
+          // Aplica filtro de servidor específico no fallback
+          if (currentFilters?.selectedServer && currentFilters.selectedServer !== '__all__') {
+            groupServers = groupServers.filter(server => 
+              server.toLowerCase().includes(currentFilters.selectedServer.toLowerCase()) ||
+              currentFilters.selectedServer.toLowerCase().includes(server.toLowerCase())
+            );
+            console.log(`🔍 Fallback filtrado por servidor '${currentFilters.selectedServer}':`, groupServers);
+          }
+          
+          if (groupServers.length > 0) {
+            fallbackServers[currentFilters.selectedGroup] = groupServers;
+            console.log(`📝 Fallback gerado para grupo ${currentFilters.selectedGroup}:`, groupServers);
+          }
         } else {
           // Mostra grupos padrão
-          fallbackServers['web'] = [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`];
-          fallbackServers['app'] = [`${systemPrefix}-app-01`];
-          fallbackServers['db'] = [`${systemPrefix}-db-01`];
-          console.log('📝 Fallback gerado com grupos padrão:', fallbackServers);
+          let allServers = {
+            'web': [`${systemPrefix}-web-01`, `${systemPrefix}-web-02`],
+            'app': [`${systemPrefix}-app-01`],
+            'db': [`${systemPrefix}-db-01`]
+          };
+          
+          // Aplica filtro de servidor específico em todos os grupos
+          if (currentFilters?.selectedServer && currentFilters.selectedServer !== '__all__') {
+            Object.entries(allServers).forEach(([groupName, servers]) => {
+              const filteredServers = servers.filter(server => 
+                server.toLowerCase().includes(currentFilters.selectedServer.toLowerCase()) ||
+                currentFilters.selectedServer.toLowerCase().includes(server.toLowerCase())
+              );
+              
+              if (filteredServers.length > 0) {
+                fallbackServers[groupName] = filteredServers;
+              }
+            });
+            console.log(`🔍 Fallback filtrado por servidor '${currentFilters.selectedServer}':`, fallbackServers);
+          } else {
+            Object.assign(fallbackServers, allServers);
+            console.log('📝 Fallback gerado com grupos padrão:', fallbackServers);
+          }
         }
         
         setServers(fallbackServers);
@@ -203,7 +259,7 @@ const JobExecutionModalComponent = ({
     } finally {
       setLoadingServers(false);
     }
-  }, [currentFilters?.systemSigla, currentFilters?.selectedGroup]);
+  }, [currentFilters?.systemSigla, currentFilters?.selectedGroup, currentFilters?.selectedServer]);
 
   // Effect para buscar servidores quando o sistema ou grupo mudam
   useEffect(() => {
