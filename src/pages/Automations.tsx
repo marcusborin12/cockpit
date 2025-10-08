@@ -311,8 +311,25 @@ const Automations = () => {
               const { area, technology, action } = parseJobTemplateName(template.name);
               
               return (
-                <Card key={template.id} className="shadow-card hover:shadow-elevated transition-all">
-                  <CardHeader className="pb-3">
+                <Card key={template.id} className="shadow-card hover:shadow-elevated transition-all relative">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-3 right-3 h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 z-10"
+                    onClick={() => {
+                      console.log('🚀 Abrindo modal de execução com filtros:', {
+                        systemSigla: filters.systemSigla,
+                        selectedGroup: filters.selectedGroup,
+                        template: template.name
+                      });
+                      setSelectedJobTemplate(template);
+                      setIsExecutionModalOpen(true);
+                    }}
+                    title="Executar automação"
+                  >
+                    <Play className="w-4 h-4" />
+                  </Button>
+                  <CardHeader className="pb-3 pr-14">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-col gap-1 flex-1 min-w-0">
                         <CardTitle className="text-base leading-tight">
@@ -358,22 +375,6 @@ const Automations = () => {
                         )}
                       </div>
                     </div>
-
-                    <Button 
-                      className="w-full gap-2"
-                      onClick={() => {
-                        console.log('🚀 Abrindo modal de execução com filtros:', {
-                          systemSigla: filters.systemSigla,
-                          selectedGroup: filters.selectedGroup,
-                          template: template.name
-                        });
-                        setSelectedJobTemplate(template);
-                        setIsExecutionModalOpen(true);
-                      }}
-                    >
-                      <Play className="w-4 h-4" />
-                      Executar
-                    </Button>
                   </CardContent>
                 </Card>
               );

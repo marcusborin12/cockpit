@@ -6,6 +6,7 @@ import {
   Menu
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { getVersionString } from "@/config/version";
 
 interface LayoutProps {
   children: ReactNode;
@@ -55,7 +56,14 @@ export const Layout = ({ children }: LayoutProps) => {
           })}
         </nav>
 
-
+        {/* Version info */}
+        <div className="mt-auto p-4 border-t border-border">
+          <div className="text-xs text-muted-foreground text-center">
+            <div className="font-medium">Cockpit Automação</div>
+            <div className="mt-1">{getVersionString()}</div>
+            <div className="mt-1 text-green-600 font-medium">BETA</div>
+          </div>
+        </div>
       </aside>
 
       {/* Main content */}
