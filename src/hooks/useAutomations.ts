@@ -61,52 +61,48 @@ export const useJobTemplates = (filters?: Partial<AutomationFilters>) => {
       searchTerm: filters?.searchTerm
     });
 
-    // Filtro por sistema com exceção para playbooks "-server-"
+    // IMPORTANTE: Job templates não têm sistema no nome, apenas tecnologia
+    // Padrão real: area-TECNOLOGIA-ação (ex: gsti-api-healthcheck)
+    // O filtro por sistema é conceitual - quando seleciona um sistema,
+    // mostra TODAS as tecnologias + os playbooks "-server-"
+    
+    // Filtro por sistema - mostra todos os templates quando um sistema é selecionado
+    // (O sistema é usado apenas para filtrar inventários/grupos/servidores)
     if (filters?.systemSigla && filters.systemSigla.trim() && filters.systemSigla !== 'all') {
       const selectedSystem = filters.systemSigla.toLowerCase();
-      console.log('🎯 Aplicando filtro de sistema:', selectedSystem);
+      console.log('🎯 Sistema selecionado:', selectedSystem, '- Mostrando todas as tecnologias + exceções');
       
-      templates = templates.filter(template => {
-        // EXCEÇÃO: Playbooks com "-server-" sempre aparecem
-        if (isServerPlaybook(template.name)) {
-          console.log('🔓 Exceção aplicada para playbook server (sistema):', template.name);
-          return true;
-        }
-        
-        // Filtro normal por sistema (segunda parte do nome: area-SISTEMA-tecnologia)
-        const nameParts = template.name.toLowerCase().split('-');
-        if (nameParts.length >= 2) {
-          const systemPart = nameParts[1];
-          const matchesSystem = systemPart === selectedSystem;
-          console.log(`🔍 Analisando template: ${template.name} | Sistema esperado: ${selectedSystem} | Sistema encontrado: ${systemPart} | Match: ${matchesSystem}`);
-          return matchesSystem;
-        }
-        console.log(`❌ Template ignorado (formato inválido): ${template.name}`);
-        return false;
-      });
-      
-      console.log('📊 Após filtro de sistema:', templates.length, 'templates restantes');
+      // Quando há sistema selecionado, mostra TODOS os templates
+      // (o filtro real será feito pelos grupos/tecnologias)
+      console.log('✅ Sistema filtrado - mantendo todos os templates para seleção de tecnologia');
     }
 
     // Filtro por grupo/tecnologia com exceção para playbooks "-server-"
     if (filters?.selectedGroup && filters.selectedGroup.trim() && filters.selectedGroup !== '__all__') {
       const selectedGroup = filters.selectedGroup.toLowerCase();
-      console.log('🎯 Aplicando filtro de grupo:', selectedGroup);
+      console.log('🎯 Aplicando filtro de tecnologia:', selectedGroup);
       
       templates = templates.filter(template => {
         // EXCEÇÃO: Playbooks com "-server-" sempre aparecem
         if (isServerPlaybook(template.name)) {
-          console.log('🔓 Exceção aplicada para playbook server (grupo):', template.name);
+          console.log('🔓 Exceção aplicada para playbook server (tecnologia):', template.name);
           return true;
         }
         
-        // Filtro normal por grupo
-        const matchesGroup = template.name.toLowerCase().includes(`-${selectedGroup}-`);
-        console.log(`🔍 Analisando template: ${template.name} | Grupo esperado: ${selectedGroup} | Match: ${matchesGroup}`);
-        return matchesGroup;
+        // Filtro por tecnologia (segunda parte do nome: area-TECNOLOGIA-ação)
+        const nameParts = template.name.toLowerCase().split('-');
+        if (nameParts.length >= 2) {
+          const technologyPart = nameParts[1];
+          const matchesTechnology = technologyPart === selectedGroup;
+          console.log(`🔍 Analisando template: ${template.name} | Tecnologia esperada: ${selectedGroup} | Tecnologia encontrada: ${technologyPart} | Match: ${matchesTechnology}`);
+          return matchesTechnology;
+        }
+        
+        console.log(`❌ Template ignorado (formato inválido): ${template.name}`);
+        return false;
       });
       
-      console.log('📊 Após filtro de grupo:', templates.length, 'templates restantes');
+      console.log('📊 Após filtro de tecnologia:', templates.length, 'templates restantes');
     }
 
     // Filtro de busca textual
