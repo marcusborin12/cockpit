@@ -397,9 +397,8 @@ const Automations = () => {
         }}
         onExecutionStarted={(jobId) => {
           console.log('Job iniciado:', jobId);
-          setIsExecutionModalOpen(false);
-          setSelectedJobTemplate(null);
-          // Aqui você pode adicionar lógica adicional, como navegar para o Dashboard
+          // Modal permanece aberto para acompanhar execução
+          // Aqui você pode adicionar lógica adicional se necessário
         }}
       />
     </Layout>

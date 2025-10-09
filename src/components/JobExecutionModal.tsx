@@ -366,24 +366,7 @@ const JobExecutionModalComponent = ({
     }
   }, [isOpen, fetchServersFromInventory]);
 
-  // Effect para limpar estados quando o modal é fechado
-  useEffect(() => {
-    if (!isOpen) {
-      // Limpa estados quando o modal é fechado
-      setExecutionResult(null);
-      setCurrentJob(null);
-      setJobStatus('');
-      setJobError('');
-      setIsExecuting(false);
-      lastJobHashRef.current = '';
-      
-      // Limpa polling se existir
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-  }, [isOpen]);
+
 
   // Função para transformar servidores em lista plana para tabela
   const getServersForTable = useCallback(() => {
