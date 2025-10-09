@@ -11,18 +11,24 @@ import {
 class AWXService {
   private async makeRequest<T>(
     endpoint: string, 
-    options: RequestInit = {}
+    options: RequestInit = {},
+    customToken?: string
   ): Promise<T> {
     const url = buildAwxUrl(endpoint);
     
     try {
-      console.log('🔄 AWX Request:', { url, endpoint, options });
+      console.log('🔄 AWX Request:', { url, endpoint, options, hasCustomToken: !!customToken });
+      
+      // Usa token customizado se fornecido, senão usa o padrão
+      const authHeaders = customToken 
+        ? { 'Authorization': `Bearer ${customToken}`, 'Content-Type': 'application/json' }
+        : getAwxAuthHeaders();
       
       const response = await fetch(url, {
         ...options,
         mode: 'cors', // Explicit CORS mode
         headers: {
-          ...getAwxAuthHeaders(),
+          ...authHeaders,
           ...options.headers,
         },
         signal: AbortSignal.timeout(AWX_CONFIG.TIMEOUT),
@@ -218,17 +224,23 @@ class AWXService {
   }
 
   /**
-   * Busca inventários por sigla de sistema
+   * Busca inventários por sigla de sistema-ambiente (ex: "SPI-PRD")
    */
   async getInventoriesBySystem(systemSigla: string): Promise<any[]> {
     const allInventories = await this.getInventories({
       page_size: AWX_CONFIG.PAGINATION.MAX_PAGE_SIZE,
     });
     
+    // Se systemSigla contém ambiente (ex: "SPI-PRD"), separa sistema e ambiente
+    const systemParts = systemSigla.split('-');
+    const system = systemParts[0]?.toLowerCase();
+    const environment = systemParts[1]?.toLowerCase() || 'prd'; // Default para PRD
+    
     return allInventories.results.filter(inventory => {
       const nameParts = inventory.name.toLowerCase().split('-');
       return nameParts.length >= 4 && 
-             nameParts[1] === systemSigla.toLowerCase() && 
+             nameParts[1] === system && // Sistema na segunda posição
+             nameParts[2] === environment && // Ambiente na terceira posição
              nameParts[nameParts.length - 1] === 'inventario';
     });
   }
@@ -514,6 +526,7 @@ class AWXService {
       systemSigla?: string;
       selectedGroup?: string;
       selectedServers?: string[];
+      authToken?: string;
     }
   ): Promise<AWXJob> {
     const endpoint = buildAwxUrl(AWX_CONFIG.ENDPOINTS.JOB_LAUNCHES, { id: templateId });
@@ -564,7 +577,7 @@ class AWXService {
     return this.makeRequest<AWXJob>(endpoint, {
       method: 'POST',
       body: JSON.stringify(launchData),
-    });
+    }, options?.authToken);
   }
 
   // ===== ESTATÍSTICAS =====

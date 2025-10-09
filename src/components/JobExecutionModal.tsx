@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   FileText,
   RefreshCw,
-  Server
+  Server,
+  Shield
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
@@ -91,6 +92,7 @@ interface JobExecutionModalProps {
   onClose: () => void;
   jobTemplate: AWXJobTemplate | null;
   onExecutionStarted?: (jobId: number) => void;
+  authToken?: string;
   currentFilters?: {
     systemSigla: string;
     selectedGroup: string;
@@ -103,6 +105,7 @@ const JobExecutionModalComponent = ({
   onClose,
   jobTemplate,
   onExecutionStarted,
+  authToken,
   currentFilters
 }: JobExecutionModalProps) => {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -433,6 +436,7 @@ const JobExecutionModalComponent = ({
           systemSigla: currentFilters?.systemSigla || 'all',
           selectedGroup: currentFilters?.selectedGroup || '',
           selectedServers: currentFilters?.selectedServers || [],
+          authToken: authToken,
         }
       );
       
@@ -508,13 +512,26 @@ const JobExecutionModalComponent = ({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Play className="w-5 h-5 text-primary" />
-            Executar Automação
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="w-5 h-5 text-primary" />
+              Executar Automação
+            </DialogTitle>
+            {authToken && (
+              <Badge variant="outline" className="text-xs gap-1 bg-green-50 text-green-700 border-green-200">
+                <Shield className="w-3 h-3" />
+                Autenticado
+              </Badge>
+            )}
+          </div>
 {!executionResult && (
             <DialogDescription>
               Confirme os detalhes antes de executar a automação
+              {authToken && (
+                <span className="block text-green-600 text-xs mt-1">
+                  🔒 Execução autorizada com token de segurança
+                </span>
+              )}
             </DialogDescription>
           )}
         </DialogHeader>

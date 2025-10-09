@@ -137,15 +137,22 @@ export const useSystems = () => {
         page_size: 500, // Busca muitos inventários para garantir que pegamos todos
       });
 
-      // Extrai sistemas únicos dos nomes dos inventários
-      // Padrão: área-sistema-ambiente-inventario (ex: gsti-spi-producao-inventario)
+      // Extrai sistemas únicos dos nomes dos inventários DE PRODUÇÃO apenas
+      // Padrão: área-sistema-ambiente-inventario (ex: gsti-spi-prd-inventario)
+      // FILTRO: Apenas inventários com "PRD" no ambiente (terceira posição)
       const systemsSet = new Set<string>();
       
       response.results.forEach(inventory => {
         const parts = inventory.name.split('-');
-        if (parts.length >= 2) {
+        if (parts.length >= 3) {
           const system = parts[1].toUpperCase(); // Segunda parte é o sistema
-          systemsSet.add(system);
+          const environment = parts[2].toUpperCase(); // Terceira parte é o ambiente
+          
+          // FILTRO: Apenas inventários de PRODUÇÃO
+          if (environment === 'PRD') {
+            const systemWithEnv = `${system}-${environment}`; // Ex: "SPI-PRD"
+            systemsSet.add(systemWithEnv);
+          }
         }
       });
 
