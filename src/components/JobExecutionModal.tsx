@@ -131,6 +131,7 @@ const JobExecutionModalComponent = ({
   const [showToken, setShowToken] = useState(false);
   const [isValidatingToken, setIsValidatingToken] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [showAuthSection, setShowAuthSection] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastJobHashRef = useRef<string>('');
@@ -470,6 +471,18 @@ const JobExecutionModalComponent = ({
     };
   }, []);
 
+  const handleExecuteClick = () => {
+    if (!showAuthSection) {
+      // Primeira vez clicando: mostra campo de autenticação
+      setShowAuthSection(true);
+      setAuthError(null);
+      return;
+    }
+    
+    // Segunda vez: executa se autenticado
+    executeJob();
+  };
+
   const executeJob = async () => {
     if (!jobTemplate) return;
     
@@ -590,10 +603,14 @@ const JobExecutionModalComponent = ({
             <DialogTitle className="flex items-center gap-2">
               <Play className="w-5 h-5 text-primary" />
               Executar Automação
-              {isAuthenticated ? (
-                <Lock className="w-4 h-4 text-green-600" />
-              ) : (
-                <Unlock className="w-4 h-4 text-orange-500" />
+              {showAuthSection && (
+                <>
+                  {isAuthenticated ? (
+                    <Lock className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Unlock className="w-4 h-4 text-orange-500" />
+                  )}
+                </>
               )}
             </DialogTitle>
           </div>
@@ -603,55 +620,7 @@ const JobExecutionModalComponent = ({
             </DialogDescription>
           )}
           
-          {/* Campo de Token de Autenticação */}
-          {!executionResult && (
-            <div className="bg-gray-50/50 border border-gray-200 rounded-lg p-3">
-              <Label htmlFor="auth-token" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                {isAuthenticated ? (
-                  <Lock className="w-4 h-4 text-green-600" />
-                ) : (
-                  <Unlock className="w-4 h-4 text-orange-500" />
-                )}
-                Token de Autenticação AWX
-                {isAuthenticated && (
-                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                    Válido
-                  </Badge>
-                )}
-              </Label>
-              <div className="relative mt-2">
-                <Input
-                  id="auth-token"
-                  type={showToken ? "text" : "password"}
-                  value={authToken}
-                  onChange={(e) => handleTokenChange(e.target.value)}
-                  placeholder="Insira seu token de acesso AWX"
-                  className="pr-10 font-mono text-sm"
-                  disabled={isValidatingToken}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowToken(!showToken)}
-                  disabled={isValidatingToken}
-                >
-                  {showToken ? (
-                    <EyeOff className="w-4 h-4 text-gray-500" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-gray-500" />
-                  )}
-                </Button>
-              </div>
-              {authError && (
-                <p className="text-xs text-red-600 mt-1">{authError}</p>
-              )}
-              {isValidatingToken && (
-                <p className="text-xs text-blue-600 mt-1">🔄 Validando token...</p>
-              )}
-            </div>
-          )}
+
         </DialogHeader>
 
         <div className="space-y-6">
@@ -849,6 +818,69 @@ const JobExecutionModalComponent = ({
             getStatusDisplay={getStatusDisplay}
           />
 
+          {/* Campo de Token de Autenticação - Aparece apenas quando solicitado */}
+          {showAuthSection && !executionResult && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="w-5 h-5 text-orange-600" />
+                <h3 className="font-semibold text-orange-800">Autenticação de Segurança</h3>
+                {isAuthenticated && (
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                    ✓ Autenticado
+                  </Badge>
+                )}
+              </div>
+              
+              <p className="text-sm text-orange-700 mb-3">
+                Por motivos de segurança, é necessário fornecer seu token de acesso AWX para executar esta automação.
+              </p>
+              
+              <Label htmlFor="auth-token" className="text-sm font-medium text-orange-800">
+                Token de Acesso AWX
+              </Label>
+              <div className="relative mt-2">
+                <Input
+                  id="auth-token"
+                  type={showToken ? "text" : "password"}
+                  value={authToken}
+                  onChange={(e) => handleTokenChange(e.target.value)}
+                  placeholder="Insira seu token de autenticação"
+                  className="pr-10 font-mono text-sm"
+                  disabled={isValidatingToken}
+                  autoFocus
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowToken(!showToken)}
+                  disabled={isValidatingToken}
+                >
+                  {showToken ? (
+                    <EyeOff className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-gray-500" />
+                  )}
+                </Button>
+              </div>
+              
+              {authError && (
+                <div className="flex items-center gap-2 mt-2 text-red-600">
+                  <AlertTriangle className="w-4 h-4" />
+                  <p className="text-xs">{authError}</p>
+                </div>
+              )}
+              
+              {isValidatingToken && (
+                <div className="flex items-center gap-2 mt-2 text-blue-600">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <p className="text-xs">Validando token...</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Botões */}
           <div className="flex justify-end gap-3 pt-4">
             <Button 
@@ -859,8 +891,8 @@ const JobExecutionModalComponent = ({
               Cancelar
             </Button>
             <Button 
-              onClick={executeJob}
-              disabled={isExecuting || !!executionResult || !isAuthenticated}
+              onClick={handleExecuteClick}
+              disabled={isExecuting || !!executionResult || (showAuthSection && !isAuthenticated)}
               className="gap-2"
             >
               {isExecuting ? (
@@ -872,6 +904,11 @@ const JobExecutionModalComponent = ({
                 <>
                   <CheckCircle2 className="w-4 h-4" />
                   Executado!
+                </>
+              ) : showAuthSection && isAuthenticated ? (
+                <>
+                  <Shield className="w-4 h-4" />
+                  Confirmar Execução
                 </>
               ) : (
                 <>
