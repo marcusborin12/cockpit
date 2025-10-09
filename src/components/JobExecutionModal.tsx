@@ -13,6 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Play, 
   AlertTriangle, 
@@ -124,6 +126,8 @@ const JobExecutionModalComponent = ({
   const [servers, setServers] = useState<{ [group: string]: string[] }>({});
   const [loadingServers, setLoadingServers] = useState(false);
   const [inventoryInfo, setInventoryInfo] = useState<{ id: number; name: string } | null>(null);
+  const [selectedServers, setSelectedServers] = useState<string[]>([]);
+  const [showAllServers, setShowAllServers] = useState(false);
   
   // Estados para logs
   const [jobLogs, setJobLogs] = useState<any[]>([]);
@@ -783,34 +787,39 @@ const JobExecutionModalComponent = ({
                     <p className="text-sm text-muted-foreground">Nenhum servidor encontrado no inventário</p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs font-medium">Servidor</TableHead>
-                          <TableHead className="text-xs font-medium">Grupo</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                    </Table>
-                    <ScrollArea className="h-[120px]">
-                      <Table>
-                        <TableBody>
-                          {getServersForTable().map((server, index) => (
-                            <TableRow key={index} className="hover:bg-gray-50">
-                              <TableCell className="font-mono text-xs py-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  {server.name}
+                  <div className="space-y-3">
+                    <div>
+                      <Select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={`Clique para ver ${getServersForTable().length} servidor${getServersForTable().length !== 1 ? 'es' : ''} que receberão a automação`} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[200px]">
+                          {Object.entries(servers).map(([groupName, groupServers]) => {
+                            // Filtra servidores baseado nos filtros atuais
+                            const filteredGroupServers = groupServers.filter(serverName => {
+                              if (currentFilters?.selectedGroup && currentFilters.selectedGroup !== '__all__') {
+                                return groupName.toLowerCase() === currentFilters.selectedGroup.toLowerCase();
+                              }
+                              return true;
+                            });
+                            
+                            if (filteredGroupServers.length === 0) return null;
+                            
+                            return filteredGroupServers.map((serverName) => (
+                              <SelectItem key={serverName} value={serverName} className="font-mono text-sm cursor-default pointer-events-none">
+                                <div className="flex items-center gap-2 w-full">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                  <span className="flex-1">{serverName}</span>
+                                  <Badge variant="outline" className="text-xs ml-2">
+                                    {groupName.toUpperCase()}
+                                  </Badge>
                                 </div>
-                              </TableCell>
-                              <TableCell className="text-xs py-2 text-muted-foreground">
-                                {server.group.toUpperCase()}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
+                              </SelectItem>
+                            ));
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 )}
                 
