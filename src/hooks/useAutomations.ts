@@ -140,6 +140,7 @@ export const useSystems = () => {
       // Extrai sistemas únicos dos nomes dos inventários DE PRODUÇÃO apenas
       // Padrão: área-sistema-ambiente-inventario (ex: gsti-spi-prd-inventario)
       // FILTRO: Apenas inventários com "PRD" no ambiente (terceira posição)
+      // EXIBE: Apenas a sigla do sistema (ex: "SPI")
       const systemsSet = new Set<string>();
       
       response.results.forEach(inventory => {
@@ -150,8 +151,7 @@ export const useSystems = () => {
           
           // FILTRO: Apenas inventários de PRODUÇÃO
           if (environment === 'PRD') {
-            const systemWithEnv = `${system}-${environment}`; // Ex: "SPI-PRD"
-            systemsSet.add(systemWithEnv);
+            systemsSet.add(system); // Adiciona apenas a sigla: "SPI"
           }
         }
       });

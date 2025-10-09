@@ -224,23 +224,24 @@ class AWXService {
   }
 
   /**
-   * Busca inventários por sigla de sistema-ambiente (ex: "SPI-PRD")
+   * Busca inventários por sigla de sistema (ex: "SPI")
+   * Sempre filtra por ambiente de PRODUÇÃO (PRD)
    */
   async getInventoriesBySystem(systemSigla: string): Promise<any[]> {
     const allInventories = await this.getInventories({
       page_size: AWX_CONFIG.PAGINATION.MAX_PAGE_SIZE,
     });
     
-    // Se systemSigla contém ambiente (ex: "SPI-PRD"), separa sistema e ambiente
-    const systemParts = systemSigla.split('-');
-    const system = systemParts[0]?.toLowerCase();
-    const environment = systemParts[1]?.toLowerCase() || 'prd'; // Default para PRD
+    // Sistema vem apenas como sigla (ex: "SPI")
+    // Sempre busca por ambiente PRD
+    const system = systemSigla.toLowerCase();
+    const environment = 'prd'; // Sempre PRD
     
     return allInventories.results.filter(inventory => {
       const nameParts = inventory.name.toLowerCase().split('-');
       return nameParts.length >= 4 && 
              nameParts[1] === system && // Sistema na segunda posição
-             nameParts[2] === environment && // Ambiente na terceira posição
+             nameParts[2] === environment && // Sempre PRD na terceira posição
              nameParts[nameParts.length - 1] === 'inventario';
     });
   }
@@ -462,11 +463,21 @@ class AWXService {
       if (systemSigla && systemSigla !== 'all') {
         console.log('🎯 Buscando inventário para sistema:', systemSigla);
         
+        // Sistema vem apenas como sigla (ex: "SPI")
+        // Sempre busca por ambiente PRD
+        const system = systemSigla.toLowerCase();
+        const environment = 'prd'; // Sempre PRD
+        
+        console.log('📋 Sistema extraído:', { system, environment, originalSigla: systemSigla });
+        
         targetInventory = inventories.results.find(inv => {
           const parts = inv.name.toLowerCase().split('-');
-          const isSystemMatch = parts.length >= 2 && parts[1] === systemSigla.toLowerCase();
+          const isSystemMatch = parts.length >= 3 && 
+                                parts[1] === system && 
+                                parts[2] === environment;
           
-          console.log('🔎 Verificando inventário:', inv.name, '- Sistema match:', isSystemMatch);
+          console.log('🔎 Verificando inventário:', inv.name, '- Sistema match:', isSystemMatch, 
+                     '- Partes:', parts, '- Esperado:', [parts[0], system, environment, 'inventario']);
           return isSystemMatch;
         });
         
