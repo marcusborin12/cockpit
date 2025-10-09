@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Play, 
   AlertTriangle, 
@@ -20,7 +22,11 @@ import {
   FileText,
   RefreshCw,
   Server,
-  Shield
+  Shield,
+  Lock,
+  Unlock,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
@@ -92,7 +98,6 @@ interface JobExecutionModalProps {
   onClose: () => void;
   jobTemplate: AWXJobTemplate | null;
   onExecutionStarted?: (jobId: number) => void;
-  authToken?: string;
   currentFilters?: {
     systemSigla: string;
     selectedGroup: string;
@@ -105,7 +110,6 @@ const JobExecutionModalComponent = ({
   onClose,
   jobTemplate,
   onExecutionStarted,
-  authToken,
   currentFilters
 }: JobExecutionModalProps) => {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -121,8 +125,72 @@ const JobExecutionModalComponent = ({
   const [loadingServers, setLoadingServers] = useState(false);
   const [inventoryInfo, setInventoryInfo] = useState<{ id: number; name: string } | null>(null);
   
+  // Estados de autenticação
+  const [authToken, setAuthToken] = useState<string>('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showToken, setShowToken] = useState(false);
+  const [isValidatingToken, setIsValidatingToken] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastJobHashRef = useRef<string>('');
+
+  // Função para validar token
+  const validateToken = useCallback(async (token: string): Promise<boolean> => {
+    try {
+      setIsValidatingToken(true);
+      setAuthError(null);
+
+      // Faz uma requisição simples para validar o token
+      const response = await fetch('/api/inventories/?page_size=1', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        setIsAuthenticated(true);
+        return true;
+      } else {
+        setAuthError('Token inválido ou sem permissões adequadas');
+        setIsAuthenticated(false);
+        return false;
+      }
+    } catch (error) {
+      setAuthError('Erro ao validar token. Verifique sua conexão.');
+      setIsAuthenticated(false);
+      return false;
+    } finally {
+      setIsValidatingToken(false);
+    }
+  }, []);
+
+  // Função para lidar com mudança do token
+  const handleTokenChange = useCallback(async (value: string) => {
+    setAuthToken(value);
+    setAuthError(null);
+    
+    if (value.trim()) {
+      // Validação em tempo real com debounce
+      const timeoutId = setTimeout(() => {
+        validateToken(value.trim());
+      }, 1000);
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      setIsAuthenticated(false);
+    }
+  }, [validateToken]);
+
+  // Limpa a autenticação ao fechar o modal
+  const handleModalClose = useCallback(() => {
+    setAuthToken('');
+    setIsAuthenticated(false);
+    setShowToken(false);
+    setAuthError(null);
+    onClose();
+  }, [onClose]);
 
   // Função para buscar servidores do inventário
   const fetchServersFromInventory = useCallback(async () => {
@@ -404,6 +472,12 @@ const JobExecutionModalComponent = ({
 
   const executeJob = async () => {
     if (!jobTemplate) return;
+    
+    // Verifica se está autenticado
+    if (!isAuthenticated || !authToken.trim()) {
+      setAuthError('Token de autenticação necessário para executar a automação');
+      return;
+    }
 
     try {
       setIsExecuting(true);
@@ -509,30 +583,74 @@ const JobExecutionModalComponent = ({
   const action = nameParts.slice(2).join('-').toUpperCase() || 'N/A';
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <Play className="w-5 h-5 text-primary" />
               Executar Automação
+              {isAuthenticated ? (
+                <Lock className="w-4 h-4 text-green-600" />
+              ) : (
+                <Unlock className="w-4 h-4 text-orange-500" />
+              )}
             </DialogTitle>
-            {authToken && (
-              <Badge variant="outline" className="text-xs gap-1 bg-green-50 text-green-700 border-green-200">
-                <Shield className="w-3 h-3" />
-                Autenticado
-              </Badge>
-            )}
           </div>
 {!executionResult && (
             <DialogDescription>
               Confirme os detalhes antes de executar a automação
-              {authToken && (
-                <span className="block text-green-600 text-xs mt-1">
-                  🔒 Execução autorizada com token de segurança
-                </span>
-              )}
             </DialogDescription>
+          )}
+          
+          {/* Campo de Token de Autenticação */}
+          {!executionResult && (
+            <div className="bg-gray-50/50 border border-gray-200 rounded-lg p-3">
+              <Label htmlFor="auth-token" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                {isAuthenticated ? (
+                  <Lock className="w-4 h-4 text-green-600" />
+                ) : (
+                  <Unlock className="w-4 h-4 text-orange-500" />
+                )}
+                Token de Autenticação AWX
+                {isAuthenticated && (
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                    Válido
+                  </Badge>
+                )}
+              </Label>
+              <div className="relative mt-2">
+                <Input
+                  id="auth-token"
+                  type={showToken ? "text" : "password"}
+                  value={authToken}
+                  onChange={(e) => handleTokenChange(e.target.value)}
+                  placeholder="Insira seu token de acesso AWX"
+                  className="pr-10 font-mono text-sm"
+                  disabled={isValidatingToken}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowToken(!showToken)}
+                  disabled={isValidatingToken}
+                >
+                  {showToken ? (
+                    <EyeOff className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-gray-500" />
+                  )}
+                </Button>
+              </div>
+              {authError && (
+                <p className="text-xs text-red-600 mt-1">{authError}</p>
+              )}
+              {isValidatingToken && (
+                <p className="text-xs text-blue-600 mt-1">🔄 Validando token...</p>
+              )}
+            </div>
           )}
         </DialogHeader>
 
@@ -735,14 +853,14 @@ const JobExecutionModalComponent = ({
           <div className="flex justify-end gap-3 pt-4">
             <Button 
               variant="outline" 
-              onClick={handleClose}
+              onClick={handleModalClose}
               disabled={isExecuting}
             >
               Cancelar
             </Button>
             <Button 
               onClick={executeJob}
-              disabled={isExecuting || !!executionResult}
+              disabled={isExecuting || !!executionResult || !isAuthenticated}
               className="gap-2"
             >
               {isExecuting ? (

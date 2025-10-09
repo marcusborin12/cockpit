@@ -9,18 +9,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAutomations } from "@/hooks/useAutomations";
-import { Play, Search, Filter, RefreshCw, Database, Settings, AlertCircle, Shield } from "lucide-react";
+import { Play, Search, Filter, RefreshCw, Database, Settings, AlertCircle } from "lucide-react";
 import type { AWXJobTemplate } from "@/config/awx";
 import { JobExecutionModal } from "@/components/JobExecutionModal";
-import { TokenAuthModal } from "@/components/TokenAuthModal";
+
 
 const Automations = () => {
   const [selectedJobTemplate, setSelectedJobTemplate] = useState<AWXJobTemplate | null>(null);
   const [isExecutionModalOpen, setIsExecutionModalOpen] = useState(false);
-  const [isTokenAuthModalOpen, setIsTokenAuthModalOpen] = useState(false);
-  const [authToken, setAuthToken] = useState<string>("");
-  const [tokenError, setTokenError] = useState<string | null>(null);
-  const [isValidatingToken, setIsValidatingToken] = useState(false);
   
   const {
     filters,
@@ -46,63 +42,7 @@ const Automations = () => {
     };
   };
 
-  // Função para validar token AWX
-  const validateToken = async (token: string): Promise<boolean> => {
-    try {
-      setIsValidatingToken(true);
-      setTokenError(null);
 
-      // Faz uma requisição simples para validar o token
-      const response = await fetch('/api/inventories/?page_size=1', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        return true;
-      } else {
-        setTokenError('Token inválido ou sem permissões adequadas');
-        return false;
-      }
-    } catch (error) {
-      setTokenError('Erro ao validar token. Verifique sua conexão.');
-      return false;
-    } finally {
-      setIsValidatingToken(false);
-    }
-  };
-
-  // Gerencia o fluxo de autenticação e execução
-  const handleExecuteJob = (template: AWXJobTemplate) => {
-    console.log('🔐 Iniciando processo de autenticação para:', template.name);
-    setSelectedJobTemplate(template);
-    setAuthToken("");
-    setTokenError(null);
-    setIsTokenAuthModalOpen(true);
-  };
-
-  // Processa a autenticação e abre o modal de execução
-  const handleAuthenticate = async (token: string) => {
-    const isValid = await validateToken(token);
-    
-    if (isValid) {
-      setAuthToken(token);
-      setIsTokenAuthModalOpen(false);
-      setIsExecutionModalOpen(true);
-      console.log('✅ Token validado com sucesso');
-    }
-  };
-
-  // Limpa os dados de autenticação ao fechar modals
-  const handleCloseModals = () => {
-    setIsExecutionModalOpen(false);
-    setIsTokenAuthModalOpen(false);
-    setSelectedJobTemplate(null);
-    setAuthToken("");
-    setTokenError(null);
-  };
 
   // Componente de loading para cards
   const JobTemplateCardSkeleton = () => (
@@ -378,11 +318,15 @@ const Automations = () => {
                   <Button
                     size="sm"
                     variant="default"
-                    className="absolute top-3 right-3 h-8 w-8 p-0 bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all z-10"
-                    onClick={() => handleExecuteJob(template)}
-                    title="Executar automação (requer autenticação)"
+                    className="absolute top-3 right-3 h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all z-10"
+                    onClick={() => {
+                      console.log('🚀 Abrindo modal de execução:', template.name);
+                      setSelectedJobTemplate(template);
+                      setIsExecutionModalOpen(true);
+                    }}
+                    title="Executar automação"
                   >
-                    <Shield className="w-4 h-4 fill-current" />
+                    <Play className="w-4 h-4 fill-current" />
                   </Button>
                   <CardHeader className="pb-3 pr-14">
                     <div className="flex items-start justify-between gap-2">
@@ -438,30 +382,23 @@ const Automations = () => {
         </div>
       </div>
 
-      {/* Modal de Autenticação por Token */}
-      <TokenAuthModal
-        isOpen={isTokenAuthModalOpen}
-        onClose={() => setIsTokenAuthModalOpen(false)}
-        onAuthenticate={handleAuthenticate}
-        jobTemplateName={selectedJobTemplate?.name}
-        isValidating={isValidatingToken}
-        error={tokenError}
-      />
-
       {/* Modal de Execução */}
       <JobExecutionModal
         isOpen={isExecutionModalOpen}
-        onClose={handleCloseModals}
+        onClose={() => {
+          setIsExecutionModalOpen(false);
+          setSelectedJobTemplate(null);
+        }}
         jobTemplate={selectedJobTemplate}
         currentFilters={{
           systemSigla: filters.systemSigla,
           selectedGroup: filters.selectedGroup,
           selectedServers: filters.selectedServers
         }}
-        authToken={authToken}
         onExecutionStarted={(jobId) => {
           console.log('Job iniciado:', jobId);
-          handleCloseModals();
+          setIsExecutionModalOpen(false);
+          setSelectedJobTemplate(null);
           // Aqui você pode adicionar lógica adicional, como navegar para o Dashboard
         }}
       />
