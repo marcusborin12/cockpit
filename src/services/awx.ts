@@ -127,6 +127,37 @@ class AWXService {
   }
 
   /**
+   * Busca os eventos/logs estruturados de um job específico
+   */
+  async getJobEvents(jobId: number): Promise<any[]> {
+    const endpoint = `/api/v2/jobs/${jobId}/job_events/?format=json&page_size=1000`;
+    
+    try {
+      const response = await this.makeRequest<{ results: any[] }>(endpoint);
+      
+      // Filtra apenas eventos que tenham a chave 'msg' com dados
+      const eventsWithMsg = response.results.filter(event => {
+        return event.event_data && 
+               event.event_data.res && 
+               event.event_data.res.msg && 
+               Array.isArray(event.event_data.res.msg) &&
+               event.event_data.res.msg.length > 0;
+      });
+
+      console.log('📋 Job Events encontrados:', { 
+        totalEvents: response.results.length,
+        eventsWithMsg: eventsWithMsg.length,
+        jobId 
+      });
+
+      return eventsWithMsg;
+    } catch (error) {
+      console.error('❌ Erro ao buscar eventos do job:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Busca jobs em execução
    */
   async getRunningJobs(): Promise<AWXApiResponse<AWXJob>> {

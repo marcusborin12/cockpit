@@ -125,6 +125,11 @@ const JobExecutionModalComponent = ({
   const [loadingServers, setLoadingServers] = useState(false);
   const [inventoryInfo, setInventoryInfo] = useState<{ id: number; name: string } | null>(null);
   
+  // Estados para logs
+  const [jobLogs, setJobLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  
   // Estados de autenticação
   const [authToken, setAuthToken] = useState<string>('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -203,6 +208,9 @@ const JobExecutionModalComponent = ({
     setJobStatus('');
     setJobError('');
     setIsExecuting(false);
+    setJobLogs([]);
+    setLoadingLogs(false);
+    setShowLogs(false);
     lastJobHashRef.current = '';
     
     onClose();
@@ -419,7 +427,44 @@ const JobExecutionModalComponent = ({
     }
   }, []);
 
+  // Função para buscar logs do job após conclusão
+  const fetchJobLogs = useCallback(async (jobId: number) => {
+    try {
+      setLoadingLogs(true);
+      console.log('🔍 Buscando logs do job:', jobId);
+      
+      const events = await awxService.getJobEvents(jobId);
+      
+      // Extrai apenas os dados das mensagens
+      const msgData: any[] = [];
+      events.forEach(event => {
+        if (event.event_data?.res?.msg && Array.isArray(event.event_data.res.msg)) {
+          event.event_data.res.msg.forEach((msgItem: any) => {
+            msgData.push({
+              ...msgItem,
+              timestamp: event.created,
+              host: event.host_name || 'N/A',
+              task: event.task || 'N/A'
+            });
+          });
+        }
+      });
 
+      console.log('📋 Dados extraídos dos logs:', msgData);
+      setJobLogs(msgData);
+      
+      // Mostra automaticamente os logs se houver dados
+      if (msgData.length > 0) {
+        setShowLogs(true);
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao buscar logs:', error);
+      setJobLogs([]);
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, []);
 
   // Effect para polling do status do job (simplificado)
   useEffect(() => {
@@ -441,8 +486,12 @@ const JobExecutionModalComponent = ({
           const job = await fetchJobStatus(jobId);
           if (!job || !isActive) return;
           
-          // Se o job terminou, para o polling
+          // Se o job terminou, para o polling e busca os logs
           if (['successful', 'failed', 'error', 'canceled'].includes(job.status)) {
+            // Busca logs apenas para jobs bem-sucedidos
+            if (job.status === 'successful') {
+              await fetchJobLogs(jobId);
+            }
             return; // Para o polling
           }
           
@@ -462,7 +511,7 @@ const JobExecutionModalComponent = ({
     return () => {
       isActive = false;
     };
-  }, [executionResult?.jobId, fetchJobStatus]);
+  }, [executionResult?.jobId, fetchJobStatus, fetchJobLogs]);
 
   // Removido auto-scroll para evitar re-renderizações
 
@@ -830,7 +879,76 @@ const JobExecutionModalComponent = ({
             getStatusDisplay={getStatusDisplay}
           />
 
+          {/* Logs da Execução */}
+          {(jobLogs.length > 0 || loadingLogs) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="font-medium text-sm text-muted-foreground">
+                    Resultados da Execução
+                    {loadingLogs && (
+                      <RefreshCw className="w-3 h-3 animate-spin ml-2 inline" />
+                    )}
+                  </h3>
+                </div>
+                {jobLogs.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {jobLogs.length} registro{jobLogs.length !== 1 ? 's' : ''}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowLogs(!showLogs)}
+                      className="text-xs h-6"
+                    >
+                      {showLogs ? 'Ocultar' : 'Mostrar'}
+                    </Button>
+                  </div>
+                )}
+              </div>
 
+              {loadingLogs && (
+                <div className="flex items-center justify-center py-4 bg-gray-50 border rounded-lg">
+                  <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                  <span className="text-sm text-muted-foreground">Carregando logs da execução...</span>
+                </div>
+              )}
+
+              {showLogs && jobLogs.length > 0 && (
+                <div className="bg-gray-50 border rounded-lg p-3">
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-2">
+                      {jobLogs.map((logItem, index) => (
+                        <div key={index} className="bg-white border rounded p-3 text-sm">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2 text-xs text-muted-foreground">
+                            <div><strong>Host:</strong> {logItem.host}</div>
+                            <div><strong>Task:</strong> {logItem.task}</div>
+                          </div>
+                          <div className="space-y-1">
+                            {Object.entries(logItem).map(([key, value]) => {
+                              // Pula campos técnicos
+                              if (['timestamp', 'host', 'task'].includes(key)) return null;
+                              
+                              return (
+                                <div key={key} className="flex">
+                                  <span className="font-medium text-gray-700 w-24 flex-shrink-0">{key}:</span>
+                                  <span className="text-gray-900 font-mono text-xs">
+                                    {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Botões */}
           <div className="flex justify-end gap-3 pt-4">
