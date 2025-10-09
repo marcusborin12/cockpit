@@ -158,6 +158,13 @@ export interface AWXDashboardStats {
 export const buildAwxUrl = (endpoint: string, params?: Record<string, string | number>) => {
   const baseUrl = AWX_CONFIG.BASE_URL;
   
+  console.log('🔍 Debug buildAwxUrl:', {
+    isDev: import.meta.env.DEV,
+    vitePortalBaseUrl: import.meta.env.VITE_PORTAL_BASE_URL,
+    baseUrl,
+    endpoint
+  });
+  
   // Se o endpoint já é uma URL completa (para casos especiais), usa ela diretamente
   if (endpoint.includes(baseUrl)) {
     return endpoint;
@@ -173,7 +180,7 @@ export const buildAwxUrl = (endpoint: string, params?: Record<string, string | n
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       url = url.replace(`{${key}}`, String(value));
-    });
+    });  
   }
   
   console.log('🔗 Building URL:', { baseUrl, endpoint, cleanEndpoint, finalUrl: url });

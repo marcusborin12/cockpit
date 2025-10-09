@@ -127,30 +127,104 @@ class AWXService {
   }
 
   /**
+   * Busca o stdout de um job específico para processamento no modal
+   */
+  async getJobStdout(jobId: number): Promise<string> {
+    const endpoint = `jobs/${jobId}/stdout/?format=txt`;
+    const url = buildAwxUrl(endpoint);
+    
+    console.log('🔗 URL para stdout:', { 
+      jobId, 
+      endpoint, 
+      url, 
+      baseUrl: AWX_CONFIG.BASE_URL,
+      isDev: import.meta.env.DEV,
+      portalBaseUrl: import.meta.env.VITE_PORTAL_BASE_URL
+    });
+    
+    try {
+      const response = await fetch(url, {
+        headers: getAwxAuthHeaders(),
+        signal: AbortSignal.timeout(AWX_CONFIG.TIMEOUT),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar stdout do job ${jobId}: ${response.status} ${response.statusText}`);
+      }
+
+      const stdout = await response.text();
+      return stdout;
+    } catch (error) {
+      console.error('❌ Erro ao buscar stdout:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Constrói a URL para visualizar logs de um job em nova aba
+   */
+  getJobLogsUrl(jobId: number): string {
+    const baseUrl = import.meta.env.VITE_PORTAL_BASE_URL || 'http://localhost:8080';
+    return `${baseUrl}/api/v2/jobs/${jobId}/stdout/?format=txt_download`;
+  }
+
+  /**
    * Busca os eventos/logs estruturados de um job específico
    */
   async getJobEvents(jobId: number): Promise<any[]> {
-    const endpoint = `/api/v2/jobs/${jobId}/job_events/?format=json&page_size=1000`;
+    const endpoint = `jobs/${jobId}/stdout/?format=json`;
     
     try {
-      const response = await this.makeRequest<{ results: any[] }>(endpoint);
+      const response = await this.makeRequest<any>(endpoint);
       
-      // Filtra apenas eventos que tenham a chave 'msg' com dados
-      const eventsWithMsg = response.results.filter(event => {
-        return event.event_data && 
-               event.event_data.res && 
-               event.event_data.res.msg && 
-               Array.isArray(event.event_data.res.msg) &&
-               event.event_data.res.msg.length > 0;
-      });
+      console.log('� Stdout JSON recebido:', response);
+      
+      // Processa o stdout JSON para extrair informações úteis
+      const logData: any[] = [];
+      
+      // Se response é uma string, tenta fazer parse
+      let stdoutData = response;
+      if (typeof response === 'string') {
+        try {
+          stdoutData = JSON.parse(response);
+        } catch (e) {
+          console.warn('Stdout não é um JSON válido, usando como texto:', response);
+          logData.push({
+            type: 'raw_output',
+            content: response,
+            timestamp: new Date().toISOString()
+          });
+          return logData;
+        }
+      }
+      
+      // Processa o JSON estruturado se existir
+      if (stdoutData && typeof stdoutData === 'object') {
+        // Se tem propriedades como events, results, etc.
+        Object.entries(stdoutData).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            value.forEach((item: any, index: number) => {
+              if (item && typeof item === 'object') {
+                logData.push({
+                  type: key,
+                  index: index,
+                  ...item,
+                  timestamp: item.timestamp || new Date().toISOString()
+                });
+              }
+            });
+          } else if (value && typeof value === 'object') {
+            logData.push({
+              type: key,
+              ...value,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+      }
 
-      console.log('📋 Job Events encontrados:', { 
-        totalEvents: response.results.length,
-        eventsWithMsg: eventsWithMsg.length,
-        jobId 
-      });
-
-      return eventsWithMsg;
+      console.log('📋 Dados processados dos logs:', logData);
+      return logData;
     } catch (error) {
       console.error('❌ Erro ao buscar eventos do job:', error);
       throw error;
