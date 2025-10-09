@@ -13,6 +13,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Play, 
   AlertTriangle, 
@@ -30,6 +37,7 @@ import {
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
+import { LogsModal } from './LogsModal';
 
 // Componente memoizado para status do job
 const JobStatusDisplay = React.memo(({ 
@@ -125,10 +133,8 @@ const JobExecutionModalComponent = ({
   const [loadingServers, setLoadingServers] = useState(false);
   const [inventoryInfo, setInventoryInfo] = useState<{ id: number; name: string } | null>(null);
   
-  // Estados para logs
-  const [jobLogs, setJobLogs] = useState<any[]>([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
-  const [showLogs, setShowLogs] = useState(false);
+  // Estados do modal de logs
+  const [showLogsModal, setShowLogsModal] = useState(false);
   
   // Estados de autenticação
   const [authToken, setAuthToken] = useState<string>('');
@@ -208,9 +214,8 @@ const JobExecutionModalComponent = ({
     setJobStatus('');
     setJobError('');
     setIsExecuting(false);
-    setJobLogs([]);
-    setLoadingLogs(false);
-    setShowLogs(false);
+    setShowLogsModal(false);
+
     lastJobHashRef.current = '';
     
     onClose();
@@ -427,44 +432,7 @@ const JobExecutionModalComponent = ({
     }
   }, []);
 
-  // Função para buscar logs do job após conclusão
-  const fetchJobLogs = useCallback(async (jobId: number) => {
-    try {
-      setLoadingLogs(true);
-      console.log('🔍 Buscando logs do job:', jobId);
-      
-      const events = await awxService.getJobEvents(jobId);
-      
-      // Extrai apenas os dados das mensagens
-      const msgData: any[] = [];
-      events.forEach(event => {
-        if (event.event_data?.res?.msg && Array.isArray(event.event_data.res.msg)) {
-          event.event_data.res.msg.forEach((msgItem: any) => {
-            msgData.push({
-              ...msgItem,
-              timestamp: event.created,
-              host: event.host_name || 'N/A',
-              task: event.task || 'N/A'
-            });
-          });
-        }
-      });
 
-      console.log('📋 Dados extraídos dos logs:', msgData);
-      setJobLogs(msgData);
-      
-      // Mostra automaticamente os logs se houver dados
-      if (msgData.length > 0) {
-        setShowLogs(true);
-      }
-      
-    } catch (error) {
-      console.error('❌ Erro ao buscar logs:', error);
-      setJobLogs([]);
-    } finally {
-      setLoadingLogs(false);
-    }
-  }, []);
 
   // Effect para polling do status do job (simplificado)
   useEffect(() => {
@@ -488,10 +456,6 @@ const JobExecutionModalComponent = ({
           
           // Se o job terminou, para o polling e busca os logs
           if (['successful', 'failed', 'error', 'canceled'].includes(job.status)) {
-            // Busca logs apenas para jobs bem-sucedidos
-            if (job.status === 'successful') {
-              await fetchJobLogs(jobId);
-            }
             return; // Para o polling
           }
           
@@ -511,7 +475,7 @@ const JobExecutionModalComponent = ({
     return () => {
       isActive = false;
     };
-  }, [executionResult?.jobId, fetchJobStatus, fetchJobLogs]);
+  }, [executionResult?.jobId, fetchJobStatus]);
 
   // Removido auto-scroll para evitar re-renderizações
 
@@ -783,35 +747,35 @@ const JobExecutionModalComponent = ({
                     <p className="text-sm text-muted-foreground">Nenhum servidor encontrado no inventário</p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs font-medium">Servidor</TableHead>
-                          <TableHead className="text-xs font-medium">Grupo</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                    </Table>
-                    <ScrollArea className="h-[120px]">
-                      <Table>
-                        <TableBody>
-                          {getServersForTable().map((server, index) => (
-                            <TableRow key={index} className="hover:bg-gray-50">
-                              <TableCell className="font-mono text-xs py-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  {server.name}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-xs py-2 text-muted-foreground">
-                                {server.group.toUpperCase()}
-                              </TableCell>
-                            </TableRow>
+                  <Select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={`Clique para ver os ${getServersForTable().length} servidor${getServersForTable().length !== 1 ? 'es' : ''} que receberão a automação`} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {Object.entries(servers).map(([groupName, groupServers]) => (
+                        <div key={groupName}>
+                          {/* Título do grupo */}
+                          <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-gray-100 border-b">
+                            Grupo: {groupName.toUpperCase()}
+                          </div>
+                          {/* Servidores do grupo */}
+                          {groupServers.map((serverName, serverIndex) => (
+                            <SelectItem 
+                              key={`${groupName}-${serverIndex}`} 
+                              value={`${groupName}:${serverName}`}
+                              className="pl-6"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                <span className="font-mono text-xs flex-1">{serverName}</span>
+                                <span className="text-xs text-muted-foreground">{groupName}</span>
+                              </div>
+                            </SelectItem>
                           ))}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
-                  </div>
+                        </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
                 
                 {!loadingServers && Object.keys(servers).length > 0 && (
@@ -879,76 +843,23 @@ const JobExecutionModalComponent = ({
             getStatusDisplay={getStatusDisplay}
           />
 
-          {/* Logs da Execução */}
-          {(jobLogs.length > 0 || loadingLogs) && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="font-medium text-sm text-muted-foreground">
-                    Resultados da Execução
-                    {loadingLogs && (
-                      <RefreshCw className="w-3 h-3 animate-spin ml-2 inline" />
-                    )}
-                  </h3>
-                </div>
-                {jobLogs.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {jobLogs.length} registro{jobLogs.length !== 1 ? 's' : ''}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowLogs(!showLogs)}
-                      className="text-xs h-6"
-                    >
-                      {showLogs ? 'Ocultar' : 'Mostrar'}
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {loadingLogs && (
-                <div className="flex items-center justify-center py-4 bg-gray-50 border rounded-lg">
-                  <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                  <span className="text-sm text-muted-foreground">Carregando logs da execução...</span>
-                </div>
-              )}
-
-              {showLogs && jobLogs.length > 0 && (
-                <div className="bg-gray-50 border rounded-lg p-3">
-                  <ScrollArea className="h-[300px]">
-                    <div className="space-y-2">
-                      {jobLogs.map((logItem, index) => (
-                        <div key={index} className="bg-white border rounded p-3 text-sm">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2 text-xs text-muted-foreground">
-                            <div><strong>Host:</strong> {logItem.host}</div>
-                            <div><strong>Task:</strong> {logItem.task}</div>
-                          </div>
-                          <div className="space-y-1">
-                            {Object.entries(logItem).map(([key, value]) => {
-                              // Pula campos técnicos
-                              if (['timestamp', 'host', 'task'].includes(key)) return null;
-                              
-                              return (
-                                <div key={key} className="flex">
-                                  <span className="font-medium text-gray-700 w-24 flex-shrink-0">{key}:</span>
-                                  <span className="text-gray-900 font-mono text-xs">
-                                    {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
+          {/* Botão de Logs em Evidência */}
+          {(currentJob && ['successful', 'failed', 'error'].includes(jobStatus)) && (
+            <div className="flex justify-center py-4">
+              <Button
+                onClick={() => setShowLogsModal(true)}
+                className="flex items-center gap-3 px-6 py-3 text-base font-medium"
+                variant="default"
+                size="lg"
+                disabled={!currentJob}
+              >
+                <FileText className="w-5 h-5" />
+                Ver Logs da Execução
+              </Button>
             </div>
           )}
+
+
 
           {/* Botões */}
           <div className="flex justify-end gap-3 pt-4">
@@ -1093,6 +1004,14 @@ const JobExecutionModalComponent = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Modal de Logs */}
+    <LogsModal
+      isOpen={showLogsModal}
+      onClose={() => setShowLogsModal(false)}
+      jobId={currentJob?.id || null}
+      jobName={jobTemplate?.name}
+    />
     </>
   );
 };

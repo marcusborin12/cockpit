@@ -14,10 +14,22 @@ export default defineConfig(({ mode }) => {
       port: 8080,
       proxy: {
         '/api': {
-          target: env.VITE_PORTAL_BASE_URL || 'https://192.168.15.100:32568',
+          target: env.VITE_PORTAL_BASE_URL || 'http://localhost:8080',
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, '/api/v2'),
+          configure: (proxy, options) => {
+            console.log('🔧 Proxy configurado para:', options.target);
+            
+            // Log de requisições proxy
+            proxy.on('proxyReq', (proxyReq, req, res) => {
+              console.log('📤 Proxy Request:', req.method, req.url, 'to', options.target + proxyReq.path);
+            });
+            
+            proxy.on('proxyRes', (proxyRes, req, res) => {
+              console.log('📥 Proxy Response:', proxyRes.statusCode, req.url);
+            });
+          }
         },
       },
     },
