@@ -184,13 +184,27 @@ const JobExecutionModalComponent = ({
     }
   }, [validateToken]);
 
-  // Limpa a autenticação ao fechar o modal
+  // Limpa todos os estados ao fechar o modal
   const handleModalClose = useCallback(() => {
+    // Limpa polling se existir
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Limpa todos os estados
     setAuthToken('');
     setIsAuthenticated(false);
     setShowToken(false);
     setAuthError(null);
     setShowAuthPopup(false);
+    setExecutionResult(null);
+    setCurrentJob(null);
+    setJobStatus('');
+    setJobError('');
+    setIsExecuting(false);
+    lastJobHashRef.current = '';
+    
     onClose();
   }, [onClose]);
 
@@ -351,6 +365,25 @@ const JobExecutionModalComponent = ({
       fetchServersFromInventory();
     }
   }, [isOpen, fetchServersFromInventory]);
+
+  // Effect para limpar estados quando o modal é fechado
+  useEffect(() => {
+    if (!isOpen) {
+      // Limpa estados quando o modal é fechado
+      setExecutionResult(null);
+      setCurrentJob(null);
+      setJobStatus('');
+      setJobError('');
+      setIsExecuting(false);
+      lastJobHashRef.current = '';
+      
+      // Limpa polling se existir
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  }, [isOpen]);
 
   // Função para transformar servidores em lista plana para tabela
   const getServersForTable = useCallback(() => {
@@ -567,26 +600,10 @@ const JobExecutionModalComponent = ({
 
   const handleClose = useCallback(() => {
     if (!isExecuting) {
-      // Limpa o polling
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      
-      // Reset states em batch para evitar múltiplas re-renderizações
-      setTimeout(() => {
-        onClose();
-        setExecutionResult(null);
-        setCurrentJob(null);
-        setJobStatus('');
-        setJobError('');
-        setServers({});
-        setLoadingServers(false);
-        setInventoryInfo(null);
-        lastJobHashRef.current = '';
-      }, 0);
+      // Usa a função handleModalClose que já limpa tudo
+      handleModalClose();
     }
-  }, [isExecuting, onClose]);
+  }, [isExecuting, handleModalClose]);
 
   if (!jobTemplate) return null;
 
