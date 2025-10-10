@@ -66,6 +66,158 @@ class AWXService {
     }
   }
 
+  // ===== AUTHENTICATION =====
+  
+  /**
+   * Faz login usando Basic Authentication e retorna informações do usuário
+   */
+  async login(username: string, password: string): Promise<any> {
+    // Cria o Basic Auth token (base64 de username:password)
+    const credentials = btoa(`${username}:${password}`);
+    const basicAuthHeaders = {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/json'
+    };
+
+    try {
+      const url = buildAwxUrl('me/');
+      
+      console.log('🔐 Tentativa de login para usuário:', username);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        headers: basicAuthHeaders,
+        signal: AbortSignal.timeout(AWX_CONFIG.TIMEOUT),
+      });
+
+      console.log('📡 Login Response:', { 
+        url,
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'No response body');
+        console.error('❌ Login Error:', { url, status: response.status, errorText });
+        
+        if (response.status === 401) {
+          throw new Error('Credenciais inválidas. Verifique seu usuário e senha.');
+        } else if (response.status === 403) {
+          throw new Error('Acesso negado. Usuário não tem permissões adequadas.');
+        } else {
+          throw new Error(`Erro no login: ${response.status} - ${response.statusText}`);
+        }
+      }
+
+      const responseData = await response.json();
+      console.log('✅ Login Response Data:', responseData);
+      
+      // A API /api/v2/me retorna uma estrutura paginada com results[]
+      let userData;
+      if (responseData.results && Array.isArray(responseData.results) && responseData.results.length > 0) {
+        userData = responseData.results[0];
+        console.log('✅ Login Success - Usuário extraído do results[0]:', { username: userData.username, id: userData.id });
+      } else if (responseData.username) {
+        // Caso seja retornado diretamente (fallback)
+        userData = responseData;
+        console.log('✅ Login Success - Usuário direto:', { username: userData.username, id: userData.id });
+      } else {
+        throw new Error('Formato de resposta da API inesperado');
+      }
+      
+      // Salva as credenciais para uso posterior
+      this.setCredentials(username, password);
+      
+      return userData;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Salva as credenciais do usuário no localStorage (forma segura seria usar sessionStorage)
+   */
+  private setCredentials(username: string, password: string): void {
+    const credentials = btoa(`${username}:${password}`);
+    sessionStorage.setItem('awx_credentials', credentials);
+    sessionStorage.setItem('awx_username', username);
+  }
+
+  /**
+   * Remove as credenciais salvas
+   */
+  logout(): void {
+    sessionStorage.removeItem('awx_credentials');
+    sessionStorage.removeItem('awx_username');
+  }
+
+  /**
+   * Verifica se o usuário está logado
+   */
+  isLoggedIn(): boolean {
+    return !!sessionStorage.getItem('awx_credentials');
+  }
+
+  /**
+   * Retorna o nome do usuário logado
+   */
+  getCurrentUsername(): string | null {
+    return sessionStorage.getItem('awx_username');
+  }
+
+  /**
+   * Obtém informações do usuário atual (usando credenciais salvas)
+   */
+  async getCurrentUser(): Promise<any> {
+    const credentials = sessionStorage.getItem('awx_credentials');
+    if (!credentials) {
+      throw new Error('Usuário não está logado');
+    }
+
+    try {
+      const url = buildAwxUrl('me/');
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/json'
+        },
+        signal: AbortSignal.timeout(AWX_CONFIG.TIMEOUT),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.logout(); // Remove credenciais inválidas
+          throw new Error('Sessão expirada. Faça login novamente.');
+        }
+        throw new Error(`Erro ao obter dados do usuário: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      console.log('✅ getCurrentUser Response Data:', responseData);
+      
+      // A API /api/v2/me retorna uma estrutura paginada com results[]
+      if (responseData.results && Array.isArray(responseData.results) && responseData.results.length > 0) {
+        console.log('✅ getCurrentUser - Usuário extraído do results[0]');
+        return responseData.results[0];
+      } else if (responseData.username) {
+        // Caso seja retornado diretamente (fallback)
+        console.log('✅ getCurrentUser - Usuário direto');
+        return responseData;
+      } else {
+        throw new Error('Formato de resposta da API inesperado');
+      }
+    } catch (error) {
+      console.error('Erro ao obter usuário atual:', error);
+      throw error;
+    }
+  }
+
   // ===== JOBS =====
   
   /**
@@ -165,6 +317,12 @@ class AWXService {
    */
   getJobLogsUrl(jobId: number): string {
     const baseUrl = import.meta.env.VITE_PORTAL_BASE_URL || 'http://localhost:8080';
+    const token = import.meta.env.VITE_PORTAL_TOKEN;
+    
+    if (token) {
+      return `${baseUrl}/api/v2/jobs/${jobId}/stdout/?format=txt_download&token=${token}`;
+    }
+    
     return `${baseUrl}/api/v2/jobs/${jobId}/stdout/?format=txt_download`;
   }
 

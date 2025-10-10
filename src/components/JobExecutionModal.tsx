@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
+import { LogsModal } from './LogsModal';
 
 // Componente memoizado para status do job
 const JobStatusDisplay = React.memo(({ 
@@ -133,6 +134,7 @@ const JobExecutionModalComponent = ({
   const [jobLogs, setJobLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [showLogsModal, setShowLogsModal] = useState(false);
   
   // Estados de autenticação
   const [authToken, setAuthToken] = useState<string>('');
@@ -215,6 +217,7 @@ const JobExecutionModalComponent = ({
     setJobLogs([]);
     setLoadingLogs(false);
     setShowLogs(false);
+    setShowLogsModal(false);
     lastJobHashRef.current = '';
     
     onClose();
@@ -888,6 +891,21 @@ const JobExecutionModalComponent = ({
             getStatusDisplay={getStatusDisplay}
           />
 
+          {/* Botão discreto para visualizar logs após conclusão */}
+          {currentJob && ['successful', 'failed', 'error', 'canceled'].includes(jobStatus) && (
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLogsModal(true)}
+                className="text-xs text-muted-foreground hover:text-foreground gap-2 h-8 px-3"
+              >
+                <FileText className="w-3 h-3" />
+                Ver logs detalhados da execução
+              </Button>
+            </div>
+          )}
+
           {/* Logs da Execução */}
           {(jobLogs.length > 0 || loadingLogs) && (
             <div className="space-y-3">
@@ -1102,6 +1120,14 @@ const JobExecutionModalComponent = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Modal de Logs Detalhados */}
+    <LogsModal
+      isOpen={showLogsModal}
+      onClose={() => setShowLogsModal(false)}
+      jobId={currentJob?.id || null}
+      jobName={jobTemplate?.name}
+    />
     </>
   );
 };

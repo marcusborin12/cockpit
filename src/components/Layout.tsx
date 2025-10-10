@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { getVersionString } from "@/config/version";
+import { UserProfile } from "./UserProfile";
 
 interface LayoutProps {
   children: ReactNode;
@@ -68,12 +69,17 @@ export const Layout = ({ children }: LayoutProps) => {
 
       {/* Main content */}
       <div className="flex-1 md:pl-64">
-        {/* Mobile header */}
-        <header className="md:hidden flex items-center justify-between h-16 px-4 border-b border-border bg-card">
-          <Button variant="ghost" size="icon">
-            <Menu className="w-6 h-6" />
-          </Button>
-          <div className="flex items-center gap-2">
+        {/* Header - Desktop and Mobile */}
+        <header className="flex items-center justify-between h-16 px-4 lg:px-6 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+          {/* Mobile menu button - only on mobile */}
+          <div className="md:hidden">
+            <Button variant="ghost" size="icon">
+              <Menu className="w-6 h-6" />
+            </Button>
+          </div>
+          
+          {/* Mobile logo - only on mobile */}
+          <div className="flex items-center gap-2 md:hidden">
             <img 
               src="images/crefisa-logo.png" 
               alt="Crefisa Logo" 
@@ -81,11 +87,16 @@ export const Layout = ({ children }: LayoutProps) => {
             />
             <span className="text-sm font-medium text-primary">Automation Hub</span>
           </div>
-          <div className="w-10" />
+          
+          {/* Desktop - empty space to push user profile to the right */}
+          <div className="hidden md:block flex-1"></div>
+          
+          {/* User Profile - always visible */}
+          <UserProfile />
         </header>
 
         {/* Page content */}
-        <main className="p-6 lg:p-8">
+        <main className="p-4 lg:p-6">
           {children}
         </main>
       </div>

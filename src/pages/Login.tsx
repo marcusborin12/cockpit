@@ -5,115 +5,87 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogIn, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
 
-const emailSchema = z.string().email("Email inválido");
-const passwordSchema = z.string().min(6, "A senha deve ter pelo menos 6 caracteres");
+const usernameSchema = z.string().min(1, "Nome de usuário é obrigatório");
+const passwordSchema = z.string().min(1, "Senha é obrigatória");
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
-  const [email, setEmail] = useState("");
+  const { login, isAuthenticated, isLoading } = useAuth();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Se já estiver autenticado, redireciona para dashboard
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        navigate("/dashboard");
-      }
-    });
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        navigate("/dashboard");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const emailValidation = emailSchema.safeParse(email);
-      if (!emailValidation.success) {
+      // Validação dos campos
+      const usernameValidation = usernameSchema.safeParse(username);
+      if (!usernameValidation.success) {
         toast({
           title: "Erro",
-          description: emailValidation.error.errors[0].message,
+          description: usernameValidation.error.errors[0].message,
           variant: "destructive",
         });
         return;
       }
 
-      if (mode !== "reset") {
-        const passwordValidation = passwordSchema.safeParse(password);
-        if (!passwordValidation.success) {
-          toast({
-            title: "Erro",
-            description: passwordValidation.error.errors[0].message,
-            variant: "destructive",
-          });
-          return;
-        }
+      const passwordValidation = passwordSchema.safeParse(password);
+      if (!passwordValidation.success) {
+        toast({
+          title: "Erro",
+          description: passwordValidation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
       }
 
-      if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      // Faz login usando o contexto de autenticação
+      await login(username, password);
 
-        if (error) throw error;
+      toast({
+        title: "Sucesso",
+        description: "Login realizado com sucesso!",
+      });
 
-        toast({
-          title: "Sucesso",
-          description: "Login realizado com sucesso!",
-        });
-      } else if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-          },
-        });
+      // Navega para dashboard
+      navigate("/dashboard");
 
-        if (error) throw error;
-
-        toast({
-          title: "Conta criada",
-          description: "Você já pode fazer login!",
-        });
-        setMode("login");
-      } else if (mode === "reset") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/`,
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: "Email enviado",
-          description: "Verifique seu email para redefinir a senha.",
-        });
-        setMode("login");
-      }
     } catch (error: any) {
       toast({
-        title: "Erro",
-        description: error.message || "Ocorreu um erro. Tente novamente.",
+        title: "Erro no Login",
+        description: error.message || "Credenciais inválidas. Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  // Se ainda está carregando a verificação inicial de auth, mostra loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
@@ -124,78 +96,45 @@ const Login = () => {
           </div>
           <CardTitle className="text-2xl">Crefisa Automation Hub</CardTitle>
           <CardDescription>
-            {mode === "login" && "Acesse a plataforma de automação e orquestração"}
-            {mode === "signup" && "Crie sua conta na plataforma"}
-            {mode === "reset" && "Recupere o acesso à sua conta"}
+            Acesse a plataforma de automação e orquestração
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAuth} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Usuário</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="Seu nome de usuário"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="h-11"
                 required
+                autoComplete="username"
               />
             </div>
-            {mode !== "reset" && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-11"
-                  required
-                />
-              </div>
-            )}
-            <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mode === "login" && "Entrar"}
-              {mode === "signup" && "Cadastrar"}
-              {mode === "reset" && "Enviar Link"}
-            </Button>
-            
             <div className="space-y-2">
-              {mode === "login" && (
-                <>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => setMode("signup")}
-                  >
-                    Cadastrar-se
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full text-sm"
-                    onClick={() => setMode("reset")}
-                  >
-                    Esqueci minha senha
-                  </Button>
-                </>
-              )}
-              {(mode === "signup" || mode === "reset") && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setMode("login")}
-                >
-                  Voltar ao login
-                </Button>
-              )}
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11"
+                required
+                autoComplete="current-password"
+              />
             </div>
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-base font-semibold" 
+              disabled={loading || isLoading}
+            >
+              {(loading || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Entrar
+            </Button>
           </form>
         </CardContent>
       </Card>
