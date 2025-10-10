@@ -1,17 +1,22 @@
 export const VERSION_INFO = {
-  version: '1.0.0-beta.3',
+  version: '1.0.0',
   buildDate: new Date().toISOString().split('T')[0],
   environment: import.meta.env.VITE_ENVIRONMENT || 'development',
   features: [
+    'Sistema de autenticação AWX integrado',
+    'Perfil de usuário no header superior',
+    'Logs detalhados de execução de jobs',
     'Filtros avançados (Sistema, Grupo, Servidores)',
     'Execução de Job Templates AWX',
     'Interface responsiva moderna',
     'Seleção múltipla de servidores',
     'Monitoramento em tempo real',
     'Integração completa AWX API',
-    'Exceção para playbooks SERVER (sempre visíveis)'
+    'Exceção para playbooks SERVER (sempre visíveis)',
+    'Modal de logs com busca e filtros',
+    'Rotas protegidas por autenticação'
   ],
-  status: 'BETA - Pronto para Produção'
+  status: 'STABLE - Versão de Produção'
 } as const;
 
 export const getVersionString = () => {
