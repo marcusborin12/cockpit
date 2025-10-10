@@ -295,6 +295,19 @@ export const useAwxDashboard = () => {
     connectionHook.refetch();
   }, [statsHook, monthlyHook, executionsHook, connectionHook]);
 
+  const forceRefreshAll = useCallback(() => {
+    // Limpa cache expirado primeiro
+    dashboardCache.clearExpired();
+    
+    // Força atualização de todos os dados (ignora cache)
+    statsHook.forceRefresh();
+    monthlyHook.forceRefresh();
+    executionsHook.forceRefresh();
+    connectionHook.refetch();
+    
+    console.log('🔄 Forçando atualização completa do dashboard');
+  }, [statsHook, monthlyHook, executionsHook, connectionHook]);
+
   return {
     // Dados
     stats: statsHook.stats,
@@ -312,5 +325,6 @@ export const useAwxDashboard = () => {
     
     // Ações
     refetch: refetchAll,
+    forceRefresh: forceRefreshAll,
   };
 };

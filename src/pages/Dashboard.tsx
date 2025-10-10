@@ -17,6 +17,7 @@ import { AWXConnectionTest } from "@/components/AWXConnectionTest";
 import { AWXDebug } from "@/components/AWXDebug";
 import { JobDetailsModal } from "@/components/JobDetailsModal";
 import { CacheInfo } from "@/components/CacheInfo";
+import { dashboardCache } from "@/lib/dashboard-cache";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -28,7 +29,8 @@ const Dashboard = () => {
     loading, 
     error, 
     lastUpdated,
-    refetch 
+    refetch,
+    forceRefresh
   } = useAwxDashboard();
 
   // Estado para o modal de detalhes
@@ -43,6 +45,11 @@ const Dashboard = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedJobId(null);
+  };
+
+  const handleRefreshClick = () => {
+    // Limpa cache expirado e força atualização de todos os dados
+    forceRefresh();
   };
 
   // Prepara dados das estatísticas
@@ -125,7 +132,7 @@ const Dashboard = () => {
             )}
             <Button 
               className="gap-2" 
-              onClick={refetch}
+              onClick={handleRefreshClick}
               disabled={loading}
             >
               {loading ? (
@@ -277,8 +284,8 @@ const Dashboard = () => {
           />
         )}
 
-        {/* Cache Info - apenas em desenvolvimento */}
-        <CacheInfo show={import.meta.env.DEV} />
+        {/* Cache Info - controlado pelo Dev Mode */}
+        <CacheInfo />
       </div>
     </Layout>
   );

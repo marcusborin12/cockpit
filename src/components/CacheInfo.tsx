@@ -3,26 +3,27 @@ import { dashboardCache } from '@/lib/dashboard-cache';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Trash2, Database } from 'lucide-react';
+import { useDevMode } from '@/contexts/DevModeContext';
 
-interface CacheInfoProps {
-  show?: boolean;
-}
-
-export const CacheInfo = ({ show = false }: CacheInfoProps) => {
+export const CacheInfo = () => {
+  const { devMode } = useDevMode();
   const [cacheInfo, setCacheInfo] = useState<Record<string, any>>({});
+  const [cacheConfig, setCacheConfig] = useState<Record<string, any>>({});
   
   const updateCacheInfo = () => {
     const info = dashboardCache.getInfo();
+    const config = dashboardCache.getConfig();
     setCacheInfo(info);
+    setCacheConfig(config);
   };
 
   useEffect(() => {
-    if (show) {
+    if (devMode) {
       updateCacheInfo();
       const interval = setInterval(updateCacheInfo, 5000); // Atualiza a cada 5 segundos
       return () => clearInterval(interval);
     }
-  }, [show]);
+  }, [devMode]);
 
   const handleClearCache = () => {
     dashboardCache.clearAll();
@@ -34,7 +35,7 @@ export const CacheInfo = ({ show = false }: CacheInfoProps) => {
     updateCacheInfo();
   };
 
-  if (!show) return null;
+  if (!devMode) return null;
 
   return (
     <Card className="mt-4 border-dashed border-orange-200 bg-orange-50/50">
@@ -70,6 +71,19 @@ export const CacheInfo = ({ show = false }: CacheInfoProps) => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Configurações de TTL */}
+        <div className="mt-3 pt-3 border-t">
+          <h4 className="text-xs font-medium text-gray-700 mb-2">Configurações de TTL (minutos)</h4>
+          <div className="space-y-1">
+            {Object.entries(cacheConfig).map(([key, config]) => (
+              <div key={key} className="flex justify-between text-xs py-1 px-2 bg-gray-50 rounded">
+                <span className="font-mono text-gray-600">{key}</span>
+                <span className="text-gray-500">{config.ttl}min</span>
+              </div>
+            ))}
+          </div>
         </div>
         
         <div className="flex gap-2 mt-3 pt-3 border-t">

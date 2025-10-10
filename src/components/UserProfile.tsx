@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown, Settings, Code } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
 import {
@@ -9,12 +9,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from './ui/dropdown-menu';
 import { Badge } from './ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDevMode } from '@/contexts/DevModeContext';
 
 export const UserProfile: React.FC = () => {
   const { user, logout, isLoading } = useAuth();
+  const { devMode, toggleDevMode } = useDevMode();
 
   const handleLogout = () => {
     logout();
@@ -126,6 +129,22 @@ export const UserProfile: React.FC = () => {
             </div>
           </div>
         </DropdownMenuLabel>
+        
+        <DropdownMenuSeparator />
+        
+        <DropdownMenuCheckboxItem
+          checked={devMode}
+          onCheckedChange={toggleDevMode}
+          className="text-sm"
+        >
+          <Code className="w-4 h-4 mr-2" />
+          Modo Desenvolvedor
+          {devMode && (
+            <Badge variant="secondary" className="ml-auto text-xs">
+              ON
+            </Badge>
+          )}
+        </DropdownMenuCheckboxItem>
         
         <DropdownMenuSeparator />
         

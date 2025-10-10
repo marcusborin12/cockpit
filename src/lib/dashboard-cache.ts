@@ -17,26 +17,27 @@ interface CacheConfig {
 }
 
 class DashboardCache {
-  private readonly CACHE_VERSION = '1.0.0';
+  private readonly CACHE_VERSION = import.meta.env.VITE_CACHE_VERSION || '1.0.0';
   private readonly CACHE_PREFIX = 'awx_dashboard_';
 
   /**
    * Configurações de cache por tipo de dados
+   * TTL configurável via variáveis de ambiente
    */
   private readonly CACHE_CONFIGS = {
     dashboardStats: {
       key: 'dashboard_stats',
-      ttl: 5, // 5 minutos para estatísticas
+      ttl: Number(import.meta.env.VITE_CACHE_DASHBOARD_STATS_TTL) || 5, // Padrão: 5 min
       version: this.CACHE_VERSION,
     },
     monthlyData: {
       key: 'monthly_data',
-      ttl: 60, // 60 minutos para dados mensais (mudam menos)
+      ttl: Number(import.meta.env.VITE_CACHE_MONTHLY_DATA_TTL) || 60, // Padrão: 60 min
       version: this.CACHE_VERSION,
     },
     recentExecutions: {
       key: 'recent_executions',
-      ttl: 2, // 2 minutos para execuções recentes
+      ttl: Number(import.meta.env.VITE_CACHE_RECENT_EXECUTIONS_TTL) || 2, // Padrão: 2 min
       version: this.CACHE_VERSION,
     },
   } as const;
@@ -224,11 +225,28 @@ class DashboardCache {
   }
 
   /**
+   * Obtém as configurações atuais do cache
+   */
+  getConfig(): Record<string, { key: string; ttl: number; version: string }> {
+    return Object.fromEntries(
+      Object.entries(this.CACHE_CONFIGS).map(([type, config]) => [
+        type,
+        { ...config }
+      ])
+    );
+  }
+
+  /**
    * Inicializa o sistema de cache
    * Remove entradas expiradas na inicialização
    */
   init(): void {
     console.log('🚀 Inicializando sistema de cache do dashboard');
+    
+    // Log das configurações do cache
+    const config = this.getConfig();
+    console.log('⚙️ Configurações do cache:', config);
+    
     this.clearExpired();
     
     // Log do estado atual do cache
