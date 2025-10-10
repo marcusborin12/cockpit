@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, LogOut, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
 import {
@@ -126,13 +126,6 @@ export const UserProfile: React.FC = () => {
             </div>
           </div>
         </DropdownMenuLabel>
-        
-        <DropdownMenuSeparator />
-        
-        <DropdownMenuItem className="text-sm">
-          <User className="w-4 h-4 mr-2" />
-          Perfil
-        </DropdownMenuItem>
         
         <DropdownMenuSeparator />
         
