@@ -366,6 +366,17 @@ class AWXService {
    */
   async getJobStdout(jobId: number): Promise<string> {
     const endpoint = `jobs/${jobId}/stdout/?format=txt`;
+    
+    // Tenta obter credenciais do cookie primeiro, depois sessionStorage como fallback
+    let credentials = getSessionCredentials();
+    if (!credentials) {
+      credentials = sessionStorage.getItem('awx_credentials');
+    }
+    
+    if (!credentials) {
+      throw new Error('Usuário não está autenticado - faça login novamente');
+    }
+
     const url = buildAwxUrl(endpoint);
     
     console.log('🔗 URL para stdout:', { 
@@ -374,20 +385,36 @@ class AWXService {
       url, 
       baseUrl: AWX_CONFIG.BASE_URL,
       isDev: import.meta.env.DEV,
-      portalBaseUrl: import.meta.env.VITE_PORTAL_BASE_URL
+      portalBaseUrl: import.meta.env.VITE_PORTAL_BASE_URL,
+      user: getSessionUsername()
     });
     
     try {
       const response = await fetch(url, {
-        headers: getAwxAuthHeaders(),
+        mode: 'cors',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'text/plain',
+          'Accept': 'text/plain'
+        },
         signal: AbortSignal.timeout(AWX_CONFIG.TIMEOUT),
       });
 
+      console.log('📡 AWX Stdout Response:', { 
+        url, 
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok,
+        contentType: response.headers.get('content-type')
+      });
+
       if (!response.ok) {
-        throw new Error(`Erro ao buscar stdout do job ${jobId}: ${response.status} ${response.statusText}`);
+        const errorText = await response.text().catch(() => 'No response body');
+        throw new Error(`Erro ao buscar stdout do job ${jobId}: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const stdout = await response.text();
+      console.log('📄 Stdout obtido:', { jobId, length: stdout.length, preview: stdout.substring(0, 200) + '...' });
       return stdout;
     } catch (error) {
       console.error('❌ Erro ao buscar stdout:', error);
