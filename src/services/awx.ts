@@ -985,10 +985,12 @@ class AWXService {
 
   /**
    * Busca dados para o gráfico de execuções mensais usando credenciais do usuário
+   * Faz consulta paginada completa da API AWX
    */
   async getMonthlyExecutions(months: number = 12): Promise<{
     labels: string[];
     executions: number[];
+    failedExecutions: number[];
     failureRates: number[];
   }> {
     try {
@@ -997,11 +999,35 @@ class AWXService {
       startDate.setMonth(startDate.getMonth() - 12);
       const startDateStr = startDate.toISOString().split('T')[0];
 
-      // Busca todos os jobs dos últimos 12 meses usando page_size alto
-      const allJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}`);
-      const allJobsArray = allJobs.results;
+      console.log('📊 Buscando dados mensais a partir de:', startDateStr);
 
-      console.log('📊 Total jobs encontrados:', allJobsArray.length);
+      // Função para buscar todas as páginas de uma consulta
+      const fetchAllPages = async (baseUrl: string): Promise<AWXJob[]> => {
+        const allJobs: AWXJob[] = [];
+        let page = 1;
+        let hasNextPage = true;
+
+        while (hasNextPage) {
+          const url = `${baseUrl}&page=${page}`;
+          console.log(`📄 Buscando página ${page}: ${url}`);
+          
+          const response = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(url);
+          allJobs.push(...response.results);
+          
+          hasNextPage = !!response.next;
+          page++;
+          
+          // Log de progresso
+          console.log(`📄 Página ${page - 1}: ${response.results.length} jobs (total: ${allJobs.length})`);
+        }
+
+        return allJobs;
+      };
+
+      // Busca todos os jobs dos últimos 12 meses com paginação completa
+      const allJobsArray = await fetchAllPages(`/jobs/?created__gte=${startDateStr}&order_by=-created`);
+
+      console.log('📊 Total de jobs encontrados após paginação completa:', allJobsArray.length);
 
       if (allJobsArray.length === 0) {
         // Se não há jobs, retorna dados zerados
@@ -1011,6 +1037,7 @@ class AWXService {
           return {
             label: date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
             executions: 0,
+            failedExecutions: 0,
             failureRate: 0,
           };
         });
@@ -1018,6 +1045,7 @@ class AWXService {
         return {
           labels: emptyData.map(d => d.label),
           executions: emptyData.map(d => d.executions),
+          failedExecutions: emptyData.map(d => d.failedExecutions),
           failureRates: emptyData.map(d => d.failureRate),
         };
       }
@@ -1035,7 +1063,7 @@ class AWXService {
         jobsByMonth.get(monthKey)!.push(job);
       });
 
-      console.log('📈 Jobs agrupados por mês:', Object.fromEntries(jobsByMonth));
+      console.log('📈 Jobs agrupados por mês:', Object.fromEntries(Array.from(jobsByMonth.entries()).map(([key, jobs]) => [key, jobs.length])));
 
       // Gera dados para os últimos N meses
       const monthlyData = [];
@@ -1056,6 +1084,7 @@ class AWXService {
         monthlyData.push({
           label: date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
           executions: totalInMonth,
+          failedExecutions: failed,
           failureRate: Number(failureRate.toFixed(1)),
         });
 
@@ -1065,6 +1094,7 @@ class AWXService {
       return {
         labels: monthlyData.map(d => d.label),
         executions: monthlyData.map(d => d.executions),
+        failedExecutions: monthlyData.map(d => d.failedExecutions),
         failureRates: monthlyData.map(d => d.failureRate),
       };
 
@@ -1078,6 +1108,7 @@ class AWXService {
         return {
           label: date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
           executions: 0,
+          failedExecutions: 0,
           failureRate: 0,
         };
       });
@@ -1085,6 +1116,7 @@ class AWXService {
       return {
         labels: fallbackData.map(d => d.label),
         executions: fallbackData.map(d => d.executions),
+        failedExecutions: fallbackData.map(d => d.failedExecutions),
         failureRates: fallbackData.map(d => d.failureRate),
       };
     }

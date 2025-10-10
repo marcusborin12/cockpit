@@ -178,7 +178,7 @@ const Dashboard = () => {
                     stacked: false,
                   },
                   stroke: {
-                    width: [0, 2],
+                    width: [0, 3],
                     curve: 'smooth',
                   },
                   plotOptions: {
@@ -193,23 +193,11 @@ const Dashboard = () => {
                       rotate: -45,
                     },
                   },
-                  yaxis: [
-                    {
-                      title: {
-                        text: 'Número de Execuções',
-                      },
-                      seriesName: 'Execuções',
+                  yaxis: {
+                    title: {
+                      text: 'Número de Execuções',
                     },
-                    {
-                      opposite: true,
-                      title: {
-                        text: 'Taxa de Falha (%)',
-                      },
-                      min: 0,
-                      max: 100,
-                      seriesName: 'Taxa de Falha',
-                    },
-                  ],
+                  },
                   colors: ['#00B0F0', '#DC3545'],
                   dataLabels: { enabled: false },
                   legend: {
@@ -222,14 +210,14 @@ const Dashboard = () => {
                 }}
                 series={[
                   {
-                    name: 'Execuções',
+                    name: 'Total de Execuções',
                     type: 'column',
                     data: monthlyData.executions,
                   },
                   {
-                    name: 'Taxa de Falha (%)',
+                    name: 'Execuções com Falha',
                     type: 'line',
-                    data: monthlyData.failureRates,
+                    data: monthlyData.failedExecutions,
                   },
                 ]}
               />

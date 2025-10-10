@@ -56,6 +56,7 @@ export const useAwxMonthlyData = () => {
   const [data, setData] = useState({
     labels: [] as string[],
     executions: [] as number[],
+    failedExecutions: [] as number[],
     failureRates: [] as number[],
   });
   const [loading, setLoading] = useState(true);
