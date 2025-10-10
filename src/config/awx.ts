@@ -1,6 +1,6 @@
 // Configuração para integração (simplificada)
 export const AWX_CONFIG = {
-  // URL base (usa proxy em desenvolvimento para evitar CORS)
+  // URL base (usa proxy em desenvolvimento, URL completa em produção)
   BASE_URL: import.meta.env.DEV 
     ? '/api' 
     : `${import.meta.env.VITE_PORTAL_BASE_URL}/api/v2`,
@@ -72,10 +72,10 @@ export const AWX_CONFIG = {
     new: 'running',
   } as const,
   
-  // Configurações de paginação
+  // Configurações de paginação (não utilizadas atualmente - queries sem limite para obter todos os dados)
   PAGINATION: {
-    DEFAULT_PAGE_SIZE: 200,
-    MAX_PAGE_SIZE: 200,
+    DEFAULT_PAGE_SIZE: 2000,
+    MAX_PAGE_SIZE: 2000,
   },
   
   // Intervalos de atualização (em milissegundos)
@@ -170,11 +170,25 @@ export const buildAwxUrl = (endpoint: string, params?: Record<string, string | n
     return endpoint;
   }
   
-  // Remove "/" inicial do endpoint se existir, pois baseUrl já termina com "/"
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+  let url;
   
-  // Constrói a URL normalmente
-  let url = `${baseUrl}/${cleanEndpoint}`;
+  if (import.meta.env.DEV) {
+    // Em desenvolvimento, usa proxy
+    // Se o endpoint já começa com /api/v2, remove o /v2 para usar o proxy
+    if (endpoint.startsWith('/api/v2/')) {
+      url = endpoint.replace('/api/v2/', '/api/');
+    } else if (endpoint.startsWith('/api/v2')) {
+      url = endpoint.replace('/api/v2', '/api');
+    } else if (endpoint.startsWith('/')) {
+      url = `/api${endpoint}`;
+    } else {
+      url = `/api/${endpoint}`;
+    }
+  } else {
+    // Em produção, usa URL completa
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    url = `${baseUrl}/${cleanEndpoint}`;
+  }
   
   // Substitui parâmetros como {id}
   if (params) {
@@ -183,7 +197,7 @@ export const buildAwxUrl = (endpoint: string, params?: Record<string, string | n
     });  
   }
   
-  console.log('🔗 Building URL:', { baseUrl, endpoint, cleanEndpoint, finalUrl: url });
+  console.log('🔗 Building URL:', { baseUrl, endpoint, finalUrl: url });
   return url;
 };
 

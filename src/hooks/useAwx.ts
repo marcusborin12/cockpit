@@ -20,7 +20,7 @@ export const useAwxDashboardStats = (autoRefresh: boolean = true) => {
       setLoading(true);
       setError(null);
       
-      const data = await awxService.getDashboardStats(30); // Últimos 30 dias
+      const data = await awxService.getDashboardStats(); // Últimos 12 meses
       setStats(data);
       setLastUpdated(new Date());
     } catch (err) {

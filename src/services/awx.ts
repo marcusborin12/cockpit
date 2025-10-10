@@ -7,8 +7,72 @@ import {
   buildAwxUrl, 
   getAwxAuthHeaders 
 } from '@/config/awx';
+import { 
+  setAuthCookie, 
+  getSessionCredentials, 
+  removeAuthCookie, 
+  hasValidAuthSession,
+  getSessionUsername 
+} from '@/lib/auth-cookies';
 
 class AWXService {
+  /**
+   * Faz requisição usando as credenciais do usuário logado (Basic Auth) via cookie de sessão
+   */
+  private async makeAuthenticatedRequest<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<T> {
+    // Tenta obter credenciais do cookie primeiro, depois sessionStorage como fallback
+    let credentials = getSessionCredentials();
+    if (!credentials) {
+      credentials = sessionStorage.getItem('awx_credentials');
+    }
+    
+    if (!credentials) {
+      throw new Error('Usuário não está autenticado - faça login novamente');
+    }
+
+    const url = buildAwxUrl(endpoint);
+    
+    try {
+      console.log('🔐 Authenticated AWX Request:', { url, endpoint });
+      
+      const response = await fetch(url, {
+        ...options,
+        mode: 'cors',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        signal: AbortSignal.timeout(AWX_CONFIG.TIMEOUT),
+      });
+
+      console.log('📡 Authenticated AWX Response:', { 
+        url,
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'No response body');
+        console.error('❌ Authenticated AWX API Error:', { url, status: response.status, errorText });
+        throw new Error(`AWX API Error: ${response.status} - ${response.statusText}. URL: ${url}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Authenticated AWX API Request failed:', {
+        url,
+        error: error instanceof Error ? error.message : error
+      });
+      throw error;
+    }
+  }
+
   private async makeRequest<T>(
     endpoint: string, 
     options: RequestInit = {},
@@ -80,7 +144,7 @@ class AWXService {
     };
 
     try {
-      const url = buildAwxUrl('me/');
+      const url = buildAwxUrl('/me/');
       
       console.log('🔐 Tentativa de login para usuário:', username);
       
@@ -138,47 +202,62 @@ class AWXService {
   }
 
   /**
-   * Salva as credenciais do usuário no localStorage (forma segura seria usar sessionStorage)
+   * Salva as credenciais do usuário no cookie de sessão e sessionStorage como fallback
    */
   private setCredentials(username: string, password: string): void {
     const credentials = btoa(`${username}:${password}`);
+    
+    // Salva no cookie de sessão (preferido)
+    setAuthCookie(credentials, username);
+    
+    // Salva no sessionStorage como fallback para compatibilidade
     sessionStorage.setItem('awx_credentials', credentials);
     sessionStorage.setItem('awx_username', username);
+    
+    console.log('🔐 Credenciais salvas em cookie e sessionStorage para:', username);
   }
 
   /**
    * Remove as credenciais salvas
    */
   logout(): void {
+    removeAuthCookie();
     sessionStorage.removeItem('awx_credentials');
     sessionStorage.removeItem('awx_username');
+    console.log('🔐 Credenciais removidas do cookie e sessionStorage');
   }
 
   /**
    * Verifica se o usuário está logado
    */
   isLoggedIn(): boolean {
-    return !!sessionStorage.getItem('awx_credentials');
+    // Verifica cookie primeiro, depois sessionStorage
+    return hasValidAuthSession() || !!sessionStorage.getItem('awx_credentials');
   }
 
   /**
    * Retorna o nome do usuário logado
    */
   getCurrentUsername(): string | null {
-    return sessionStorage.getItem('awx_username');
+    // Tenta obter do cookie primeiro, depois sessionStorage
+    let username = getSessionUsername();
+    if (!username) {
+      username = sessionStorage.getItem('awx_username');
+    }
+    return username;
   }
 
   /**
-   * Obtém informações do usuário atual (usando credenciais salvas)
+   * Obtém informações do usuário atual (usando credenciais do cookie de sessão)
    */
   async getCurrentUser(): Promise<any> {
-    const credentials = sessionStorage.getItem('awx_credentials');
+    const credentials = getSessionCredentials();
     if (!credentials) {
-      throw new Error('Usuário não está logado');
+      throw new Error('Usuário não está logado - faça login novamente');
     }
 
     try {
-      const url = buildAwxUrl('me/');
+      const url = buildAwxUrl('/me/');
       
       const response = await fetch(url, {
         method: 'GET',
@@ -427,9 +506,7 @@ class AWXService {
    * Busca job templates filtrados por tecnologia/grupo
    */
   async getJobTemplatesByTechnology(technology: string): Promise<AWXJobTemplate[]> {
-    const allTemplates = await this.getJobTemplates({
-      page_size: AWX_CONFIG.PAGINATION.MAX_PAGE_SIZE,
-    });
+    const allTemplates = await this.getJobTemplates({});
     
     // Filtra templates que contenham a tecnologia no nome
     // Exemplo: tecnologia "iis" deve retornar templates como "gsti-iis-restart"
@@ -467,9 +544,7 @@ class AWXService {
    * Padrão: nome_da_area-sigla_de_sistema-tipo_de_ambiente-inventario
    */
   async getSystemsFromInventories(): Promise<string[]> {
-    const inventories = await this.getInventories({
-      page_size: AWX_CONFIG.PAGINATION.MAX_PAGE_SIZE,
-    });
+    const inventories = await this.getInventories({});
     
     const systems = new Set<string>();
     
@@ -491,9 +566,7 @@ class AWXService {
    * Sempre filtra por ambiente de PRODUÇÃO (PRD)
    */
   async getInventoriesBySystem(systemSigla: string): Promise<any[]> {
-    const allInventories = await this.getInventories({
-      page_size: AWX_CONFIG.PAGINATION.MAX_PAGE_SIZE,
-    });
+    const allInventories = await this.getInventories({});
     
     // Sistema vem apenas como sigla (ex: "SPI")
     // Sempre busca por ambiente PRD
@@ -857,9 +930,9 @@ class AWXService {
   // ===== ESTATÍSTICAS =====
   
   /**
-   * Calcula estatísticas do dashboard
+   * Calcula estatísticas do dashboard usando credenciais do usuário - últimos 12 meses
    */
-  async getDashboardStats(periodDays: number = 30): Promise<{
+  async getDashboardStats(): Promise<{
     totalExecutions: number;
     successfulExecutions: number;
     failedExecutions: number;
@@ -867,28 +940,34 @@ class AWXService {
     failureRate: number;
     runningExecutions: number;
   }> {
-    // Data de início (X dias atrás)
+    // Data de início (12 meses atrás)
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - periodDays);
+    startDate.setMonth(startDate.getMonth() - 12);
     const startDateStr = startDate.toISOString().split('T')[0];
 
-    // Busca todos os jobs do período
-    const allJobs = await this.getJobs({
-      page_size: AWX_CONFIG.PAGINATION.MAX_PAGE_SIZE,
-      created__gte: startDateStr,
-      order_by: '-created',
+    // Total de execuções dos últimos 12 meses
+    const totalJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}`);
+
+    // Execuções com sucesso dos últimos 12 meses
+    const successfulJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}&status=successful`);
+
+    // Execuções com falha dos últimos 12 meses
+    const failedJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}&status=failed`);
+
+    // Busca jobs em execução com auth do usuário
+    const runningJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>('/jobs/?status__in=running,pending,waiting');
+
+    console.log('📊 Debug getDashboardStats:', {
+      totalExecutions: totalJobs.count,
+      successfulExecutions: successfulJobs.count,
+      failedExecutions: failedJobs.count,
+      runningJobs: runningJobs.count,
+      startDate: startDateStr
     });
 
-    // Busca jobs em execução
-    const runningJobs = await this.getRunningJobs();
-
-    const totalExecutions = allJobs.count;
-    const successfulExecutions = allJobs.results.filter(
-      job => job.status === 'successful'
-    ).length;
-    const failedExecutions = allJobs.results.filter(
-      job => ['failed', 'error', 'canceled'].includes(job.status)
-    ).length;
+    const totalExecutions = totalJobs.count;
+    const successfulExecutions = successfulJobs.count;
+    const failedExecutions = failedJobs.count;
     const runningExecutions = runningJobs.count;
 
     const successRate = totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : 0;
@@ -905,7 +984,7 @@ class AWXService {
   }
 
   /**
-   * Busca dados para o gráfico de execuções mensais
+   * Busca dados para o gráfico de execuções mensais usando credenciais do usuário
    */
   async getMonthlyExecutions(months: number = 12): Promise<{
     labels: string[];
@@ -913,15 +992,18 @@ class AWXService {
     failureRates: number[];
   }> {
     try {
-      // Primeiro, vamos pegar todos os jobs para entender o período disponível
-      const allJobs = await this.getJobs({
-        page_size: AWX_CONFIG.PAGINATION.MAX_PAGE_SIZE,
-        order_by: '-created',
-      });
+      // Data de início (12 meses atrás)
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 12);
+      const startDateStr = startDate.toISOString().split('T')[0];
 
-      console.log('📊 Total jobs encontrados:', allJobs.count);
+      // Busca todos os jobs dos últimos 12 meses usando page_size alto
+      const allJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}`);
+      const allJobsArray = allJobs.results;
 
-      if (allJobs.count === 0) {
+      console.log('📊 Total jobs encontrados:', allJobsArray.length);
+
+      if (allJobsArray.length === 0) {
         // Se não há jobs, retorna dados zerados
         const emptyData = Array.from({ length: months }, (_, i) => {
           const date = new Date();
@@ -943,7 +1025,7 @@ class AWXService {
       // Agrupa jobs por mês
       const jobsByMonth = new Map<string, AWXJob[]>();
       
-      allJobs.results.forEach(job => {
+      allJobsArray.forEach(job => {
         const jobDate = new Date(job.created);
         const monthKey = `${jobDate.getFullYear()}-${String(jobDate.getMonth() + 1).padStart(2, '0')}`;
         
@@ -1009,7 +1091,7 @@ class AWXService {
   }
 
   /**
-   * Busca execuções recentes
+   * Busca execuções recentes usando credenciais do usuário
    */
   async getRecentExecutions(limit: number = 10): Promise<{
     id: number;
@@ -1018,10 +1100,7 @@ class AWXService {
     time: string;
     duration?: string;
   }[]> {
-    const jobs = await this.getJobs({
-      page_size: limit,
-      order_by: '-created',
-    });
+    const jobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?page_size=${limit}&order_by=-created`);
 
     return jobs.results.map(job => {
       const status = AWX_CONFIG.STATUS_MAPPING[job.status] || 'running';
