@@ -24,7 +24,7 @@ import {
   FileText,
   RefreshCw,
   Server,
-  Hourglass
+  Settings
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
@@ -51,15 +51,8 @@ const JobStatusDisplay = React.memo(({
       <div className="flex items-start gap-3">
         {React.createElement(statusInfo.icon, {
           className: `w-5 h-5 ${statusInfo.color} flex-shrink-0 mt-0.5 ${
-            statusInfo.animate 
-              ? statusInfo.icon === Hourglass 
-                ? 'transition-transform duration-1000' 
-                : 'animate-spin' 
-              : ''
-          }`,
-          style: statusInfo.icon === Hourglass && statusInfo.animate ? {
-            animation: 'pulse 2s ease-in-out infinite, spin 4s linear infinite'
-          } : undefined
+            statusInfo.animate ? 'animate-spin' : ''
+          }`
         })}
         <div className="flex-1">
           <p className={`font-medium mb-1 ${statusInfo.color.replace('text-', 'text-').replace('-600', '-800')}`}>
@@ -490,10 +483,10 @@ const JobExecutionModalComponent = ({
         case 'canceled':
           return { icon: AlertTriangle, color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'Cancelado' };
         case 'running':
-          return { icon: RefreshCw, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', text: 'Executando...', animate: true };
+          return { icon: Settings, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', text: 'Executando...', animate: true };
         case 'pending':
         case 'waiting':
-          return { icon: Hourglass, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', text: 'Aguardando...', animate: true };
+          return { icon: RefreshCw, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', text: 'Aguardando...', animate: true };
         default:
           return { icon: Clock, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200', text: 'Iniciando...' };
       }
@@ -1017,7 +1010,7 @@ const JobExecutionModalComponent = ({
             >
               {isExecuting ? (
                 <>
-                  <Hourglass className="w-4 h-4 animate-pulse" />
+                  <RefreshCw className="w-4 h-4 animate-spin" />
                   Aguardando...
                 </>
               ) : executionResult?.success ? (
