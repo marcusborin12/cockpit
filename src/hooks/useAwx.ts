@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { awxService } from '@/services/awx';
+import { dashboardCache } from '@/lib/dashboard-cache';
 
 // Hook para estatísticas do dashboard
 export const useAwxDashboardStats = (autoRefresh: boolean = true) => {
@@ -15,15 +16,34 @@ export const useAwxDashboardStats = (autoRefresh: boolean = true) => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (forceRefresh: boolean = false) => {
     try {
-      setLoading(true);
       setError(null);
       
+      // Tenta usar cache primeiro (se não for refresh forçado)
+      if (!forceRefresh) {
+        const cachedStats = dashboardCache.get('dashboardStats') as typeof stats | null;
+        if (cachedStats) {
+          setStats(cachedStats);
+          setLastUpdated(new Date());
+          setLoading(false);
+          console.log('📦 Dashboard stats carregadas do cache');
+          return;
+        }
+      }
+      
+      setLoading(true);
       const data = await awxService.getDashboardStats(); // Últimos 12 meses
+      
+      // Salva no cache
+      dashboardCache.set('dashboardStats', data);
+      
       setStats(data);
       setLastUpdated(new Date());
     } catch (err) {
+      // Ignore se o erro for de abortar requisição (component unmount)
+      if (err instanceof Error && err.name === 'AbortError') return;
+      
       setError(err instanceof Error ? err.message : 'Erro ao buscar estatísticas');
       console.error('Erro ao buscar estatísticas do AWX:', err);
     } finally {
@@ -32,13 +52,28 @@ export const useAwxDashboardStats = (autoRefresh: boolean = true) => {
   }, []);
 
   useEffect(() => {
-    fetchStats();
+    let mounted = true;
+    
+    const loadStats = async () => {
+      if (mounted) {
+        await fetchStats();
+      }
+    };
+    
+    loadStats();
+    
+    return () => {
+      mounted = false;
+    };
   }, [fetchStats]);
 
   useEffect(() => {
     if (!autoRefresh) return;
 
-    const interval = setInterval(fetchStats, 60000); // Atualiza a cada 60 segundos
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 60000); // Atualiza a cada 60 segundos
+    
     return () => clearInterval(interval);
   }, [fetchStats, autoRefresh]);
 
@@ -47,7 +82,8 @@ export const useAwxDashboardStats = (autoRefresh: boolean = true) => {
     loading,
     error,
     lastUpdated,
-    refetch: fetchStats,
+    refetch: () => fetchStats(false),
+    forceRefresh: () => fetchStats(true),
   };
 };
 
@@ -62,14 +98,32 @@ export const useAwxMonthlyData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh: boolean = false) => {
     try {
-      setLoading(true);
       setError(null);
       
+      // Tenta usar cache primeiro (se não for refresh forçado)
+      if (!forceRefresh) {
+        const cachedData = dashboardCache.get('monthlyData') as typeof data | null;
+        if (cachedData) {
+          setData(cachedData);
+          setLoading(false);
+          console.log('📦 Dados mensais carregados do cache');
+          return;
+        }
+      }
+      
+      setLoading(true);
       const monthlyData = await awxService.getMonthlyExecutions(12);
+      
+      // Salva no cache
+      dashboardCache.set('monthlyData', monthlyData);
+      
       setData(monthlyData);
     } catch (err) {
+      // Ignore se o erro for de abortar requisição (component unmount)
+      if (err instanceof Error && err.name === 'AbortError') return;
+      
       setError(err instanceof Error ? err.message : 'Erro ao buscar dados mensais');
       console.error('Erro ao buscar dados mensais do AWX:', err);
     } finally {
@@ -78,14 +132,27 @@ export const useAwxMonthlyData = () => {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    let mounted = true;
+    
+    const loadData = async () => {
+      if (mounted) {
+        await fetchData();
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      mounted = false;
+    };
   }, [fetchData]);
 
   return {
     data,
     loading,
     error,
-    refetch: fetchData,
+    refetch: () => fetchData(false),
+    forceRefresh: () => fetchData(true),
   };
 };
 
@@ -101,14 +168,32 @@ export const useAwxRecentExecutions = (limit: number = 10, autoRefresh: boolean 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchExecutions = useCallback(async () => {
+  const fetchExecutions = useCallback(async (forceRefresh: boolean = false) => {
     try {
-      setLoading(true);
       setError(null);
       
+      // Tenta usar cache primeiro (se não for refresh forçado)
+      if (!forceRefresh) {
+        const cachedExecutions = dashboardCache.get('recentExecutions') as typeof executions | null;
+        if (cachedExecutions) {
+          setExecutions(cachedExecutions);
+          setLoading(false);
+          console.log('📦 Execuções recentes carregadas do cache');
+          return;
+        }
+      }
+      
+      setLoading(true);
       const data = await awxService.getRecentExecutions(limit);
+      
+      // Salva no cache
+      dashboardCache.set('recentExecutions', data);
+      
       setExecutions(data);
     } catch (err) {
+      // Ignore se o erro for de abortar requisição (component unmount)
+      if (err instanceof Error && err.name === 'AbortError') return;
+      
       setError(err instanceof Error ? err.message : 'Erro ao buscar execuções recentes');
       console.error('Erro ao buscar execuções recentes do AWX:', err);
     } finally {
@@ -117,13 +202,28 @@ export const useAwxRecentExecutions = (limit: number = 10, autoRefresh: boolean 
   }, [limit]);
 
   useEffect(() => {
-    fetchExecutions();
+    let mounted = true;
+    
+    const loadExecutions = async () => {
+      if (mounted) {
+        await fetchExecutions();
+      }
+    };
+    
+    loadExecutions();
+    
+    return () => {
+      mounted = false;
+    };
   }, [fetchExecutions]);
 
   useEffect(() => {
     if (!autoRefresh) return;
 
-    const interval = setInterval(fetchExecutions, 30000); // Atualiza a cada 30 segundos
+    const interval = setInterval(() => {
+      fetchExecutions();
+    }, 30000); // Atualiza a cada 30 segundos
+    
     return () => clearInterval(interval);
   }, [fetchExecutions, autoRefresh]);
 
@@ -131,7 +231,8 @@ export const useAwxRecentExecutions = (limit: number = 10, autoRefresh: boolean 
     executions,
     loading,
     error,
-    refetch: fetchExecutions,
+    refetch: () => fetchExecutions(false),
+    forceRefresh: () => fetchExecutions(true),
   };
 };
 

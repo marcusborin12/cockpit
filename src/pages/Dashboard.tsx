@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AWXConnectionTest } from "@/components/AWXConnectionTest";
 import { AWXDebug } from "@/components/AWXDebug";
 import { JobDetailsModal } from "@/components/JobDetailsModal";
+import { CacheInfo } from "@/components/CacheInfo";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -275,6 +276,9 @@ const Dashboard = () => {
             jobId={selectedJobId}
           />
         )}
+
+        {/* Cache Info - apenas em desenvolvimento */}
+        <CacheInfo show={import.meta.env.DEV} />
       </div>
     </Layout>
   );

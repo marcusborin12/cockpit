@@ -321,7 +321,7 @@ class AWXService {
     }
     
     const endpoint = `${AWX_CONFIG.ENDPOINTS.JOBS}?${searchParams.toString()}`;
-    return this.makeRequest<AWXApiResponse<AWXJob>>(endpoint);
+    return this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(endpoint);
   }
 
   /**
@@ -329,7 +329,7 @@ class AWXService {
    */
   async getJobDetail(jobId: number): Promise<AWXJob> {
     const endpoint = buildAwxUrl(AWX_CONFIG.ENDPOINTS.JOB_EXECUTION_DETAIL, { id: jobId });
-    return this.makeRequest<AWXJob>(endpoint);
+    return this.makeAuthenticatedRequest<AWXJob>(endpoint);
   }
 
   /**
@@ -412,7 +412,7 @@ class AWXService {
     const endpoint = `jobs/${jobId}/stdout/?format=json`;
     
     try {
-      const response = await this.makeRequest<any>(endpoint);
+      const response = await this.makeAuthenticatedRequest<any>(endpoint);
       
       console.log('� Stdout JSON recebido:', response);
       
@@ -499,7 +499,7 @@ class AWXService {
     }
     
     const endpoint = `${AWX_CONFIG.ENDPOINTS.JOB_TEMPLATES}?${searchParams.toString()}`;
-    return this.makeRequest<AWXApiResponse<AWXJobTemplate>>(endpoint);
+    return this.makeAuthenticatedRequest<AWXApiResponse<AWXJobTemplate>>(endpoint);
   }
 
   /**
@@ -536,7 +536,7 @@ class AWXService {
     }
     
     const endpoint = `inventories/?${searchParams.toString()}`;
-    return this.makeRequest<AWXApiResponse<any>>(endpoint);
+    return this.makeAuthenticatedRequest<AWXApiResponse<any>>(endpoint);
   }
 
   /**
@@ -589,7 +589,7 @@ class AWXService {
    */
   async getInventoryGroups(inventoryId: number): Promise<AWXApiResponse<any>> {
     const endpoint = `inventories/${inventoryId}/groups/`;
-    return this.makeRequest<AWXApiResponse<any>>(endpoint);
+    return this.makeAuthenticatedRequest<AWXApiResponse<any>>(endpoint);
   }
 
   /**
@@ -622,7 +622,7 @@ class AWXService {
    */
   async getInventoryHosts(inventoryId: number): Promise<AWXApiResponse<any>> {
     const endpoint = `inventories/${inventoryId}/hosts/`;
-    return this.makeRequest<AWXApiResponse<any>>(endpoint);
+    return this.makeAuthenticatedRequest<AWXApiResponse<any>>(endpoint);
   }
 
   /**
@@ -630,7 +630,7 @@ class AWXService {
    */
   async getGroupHosts(inventoryId: number, groupId: number): Promise<AWXApiResponse<any>> {
     const endpoint = `groups/${groupId}/hosts/`;
-    return this.makeRequest<AWXApiResponse<any>>(endpoint);
+    return this.makeAuthenticatedRequest<AWXApiResponse<any>>(endpoint);
   }
 
   /**
@@ -921,10 +921,10 @@ class AWXService {
       extraVars: extraVars || {}
     });
     
-    return this.makeRequest<AWXJob>(endpoint, {
+    return this.makeAuthenticatedRequest<AWXJob>(endpoint, {
       method: 'POST',
       body: JSON.stringify(launchData),
-    }, options?.authToken);
+    });
   }
 
   // ===== ESTATÍSTICAS =====
@@ -1190,7 +1190,7 @@ class AWXService {
    */
   async testConnection(): Promise<{ connected: boolean; version?: string; error?: string }> {
     try {
-      const response = await this.makeRequest<any>(AWX_CONFIG.ENDPOINTS.ME);
+      const response = await this.makeAuthenticatedRequest<any>(AWX_CONFIG.ENDPOINTS.ME);
       return {
         connected: true,
         version: response.version || 'Unknown',
