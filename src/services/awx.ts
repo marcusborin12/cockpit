@@ -946,16 +946,16 @@ class AWXService {
     const startDateStr = startDate.toISOString().split('T')[0];
 
     // Total de execuções dos últimos 12 meses
-    const totalJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}`);
+    const totalJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}&page_size=200`);
 
     // Execuções com sucesso dos últimos 12 meses
-    const successfulJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}&status=successful`);
+    const successfulJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}&status=successful&page_size=200`);
 
     // Execuções com falha dos últimos 12 meses
-    const failedJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}&status=failed`);
+    const failedJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>(`/jobs/?created__gte=${startDateStr}&status=failed&page_size=200`);
 
     // Busca jobs em execução com auth do usuário
-    const runningJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>('/jobs/?status__in=running,pending,waiting');
+    const runningJobs = await this.makeAuthenticatedRequest<AWXApiResponse<AWXJob>>('/jobs/?status__in=running,pending,waiting&page_size=200');
 
     console.log('📊 Debug getDashboardStats:', {
       totalExecutions: totalJobs.count,
@@ -1025,7 +1025,7 @@ class AWXService {
       };
 
       // Busca todos os jobs dos últimos 12 meses com paginação completa
-      const allJobsArray = await fetchAllPages(`/jobs/?created__gte=${startDateStr}&order_by=-created`);
+      const allJobsArray = await fetchAllPages(`/jobs/?created__gte=${startDateStr}&order_by=-created&page_size=200`);
 
       console.log('📊 Total de jobs encontrados após paginação completa:', allJobsArray.length);
 
