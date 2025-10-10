@@ -36,7 +36,10 @@ class AWXService {
     const url = buildAwxUrl(endpoint);
     
     try {
-      console.log('🔐 Authenticated AWX Request:', { url, endpoint });
+      // Log apenas em modo debug para reduzir ruído no console
+      if (import.meta.env.DEV && endpoint.includes('launch')) {
+        console.log('� Executando:', { endpoint, user: getSessionUsername() });
+      }
       
       const response = await fetch(url, {
         ...options,
@@ -49,14 +52,15 @@ class AWXService {
         signal: AbortSignal.timeout(AWX_CONFIG.TIMEOUT),
       });
 
-      console.log('📡 Authenticated AWX Response:', { 
-        url,
-        status: response.status, 
-        statusText: response.statusText,
-        ok: response.ok
-      });
-
-      if (!response.ok) {
+      // Log apenas respostas importantes (erros ou launches)
+      if (!response.ok || endpoint.includes('launch')) {
+        console.log('📡 AWX Response:', { 
+          url, 
+          status: response.status, 
+          statusText: response.statusText,
+          ok: response.ok
+        });
+      }      if (!response.ok) {
         const errorText = await response.text().catch(() => 'No response body');
         console.error('❌ Authenticated AWX API Error:', { url, status: response.status, errorText });
         throw new Error(`AWX API Error: ${response.status} - ${response.statusText}. URL: ${url}`);

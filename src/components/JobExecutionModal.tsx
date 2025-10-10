@@ -24,11 +24,7 @@ import {
   FileText,
   RefreshCw,
   Server,
-  Shield,
-  Lock,
-  Unlock,
-  Eye,
-  EyeOff
+  Hourglass
 } from "lucide-react";
 import { awxService } from '@/services/awx';
 import type { AWXJobTemplate, AWXJob } from '@/config/awx';
@@ -54,7 +50,16 @@ const JobStatusDisplay = React.memo(({
     <div className={`border rounded-lg p-4 ${statusInfo.bg} ${statusInfo.border}`}>
       <div className="flex items-start gap-3">
         {React.createElement(statusInfo.icon, {
-          className: `w-5 h-5 ${statusInfo.color} flex-shrink-0 mt-0.5 ${statusInfo.animate ? 'animate-spin' : ''}`
+          className: `w-5 h-5 ${statusInfo.color} flex-shrink-0 mt-0.5 ${
+            statusInfo.animate 
+              ? statusInfo.icon === Hourglass 
+                ? 'transition-transform duration-1000' 
+                : 'animate-spin' 
+              : ''
+          }`,
+          style: statusInfo.icon === Hourglass && statusInfo.animate ? {
+            animation: 'pulse 2s ease-in-out infinite, spin 4s linear infinite'
+          } : undefined
         })}
         <div className="flex-1">
           <p className={`font-medium mb-1 ${statusInfo.color.replace('text-', 'text-').replace('-600', '-800')}`}>
@@ -120,6 +125,13 @@ const JobExecutionModalComponent = ({
     success: boolean;
     jobId?: number;
     message: string;
+    errorDetails?: {
+      status?: number;
+      statusText?: string;
+      url?: string;
+      errorText?: string;
+      serverMessage?: string; // Mensagem específica extraída do JSON detail
+    };
   } | null>(null);
   const [currentJob, setCurrentJob] = useState<AWXJob | null>(null);
   const [jobStatus, setJobStatus] = useState<string>('');
@@ -137,63 +149,12 @@ const JobExecutionModalComponent = ({
   const [showLogsModal, setShowLogsModal] = useState(false);
   
   // Estados de autenticação
-  const [authToken, setAuthToken] = useState<string>('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showToken, setShowToken] = useState(false);
-  const [isValidatingToken, setIsValidatingToken] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [showAuthPopup, setShowAuthPopup] = useState(false);
+
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastJobHashRef = useRef<string>('');
 
-  // Função para validar token
-  const validateToken = useCallback(async (token: string): Promise<boolean> => {
-    try {
-      setIsValidatingToken(true);
-      setAuthError(null);
 
-      // Faz uma requisição simples para validar o token
-      const response = await fetch('/api/inventories/?page_size=1', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        setIsAuthenticated(true);
-        return true;
-      } else {
-        setAuthError('Token inválido ou sem permissões adequadas');
-        setIsAuthenticated(false);
-        return false;
-      }
-    } catch (error) {
-      setAuthError('Erro ao validar token. Verifique sua conexão.');
-      setIsAuthenticated(false);
-      return false;
-    } finally {
-      setIsValidatingToken(false);
-    }
-  }, []);
-
-  // Função para lidar com mudança do token
-  const handleTokenChange = useCallback(async (value: string) => {
-    setAuthToken(value);
-    setAuthError(null);
-    
-    if (value.trim()) {
-      // Validação em tempo real com debounce
-      const timeoutId = setTimeout(() => {
-        validateToken(value.trim());
-      }, 1000);
-      
-      return () => clearTimeout(timeoutId);
-    } else {
-      setIsAuthenticated(false);
-    }
-  }, [validateToken]);
 
   // Limpa todos os estados ao fechar o modal
   const handleModalClose = useCallback(() => {
@@ -204,11 +165,6 @@ const JobExecutionModalComponent = ({
     }
     
     // Limpa todos os estados
-    setAuthToken('');
-    setIsAuthenticated(false);
-    setShowToken(false);
-    setAuthError(null);
-    setShowAuthPopup(false);
     setExecutionResult(null);
     setCurrentJob(null);
     setJobStatus('');
@@ -537,7 +493,7 @@ const JobExecutionModalComponent = ({
           return { icon: RefreshCw, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', text: 'Executando...', animate: true };
         case 'pending':
         case 'waiting':
-          return { icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', text: 'Aguardando...' };
+          return { icon: Hourglass, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', text: 'Aguardando...', animate: true };
         default:
           return { icon: Clock, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200', text: 'Iniciando...' };
       }
@@ -545,31 +501,30 @@ const JobExecutionModalComponent = ({
   }, []);
 
   const handleExecuteClick = () => {
-    if (!isAuthenticated) {
-      // Se não está autenticado, abre o popup de autenticação
-      setShowAuthPopup(true);
-      setAuthError(null);
-      return;
-    }
-    
-    // Se já está autenticado, executa o job
     executeJob();
   };
 
   const executeJob = async () => {
     if (!jobTemplate) return;
     
-    // Verifica se está autenticado
-    if (!isAuthenticated || !authToken.trim()) {
-      setAuthError('Token de autenticação necessário para executar a automação');
-      return;
-    }
-
     try {
       setIsExecuting(true);
       setExecutionResult(null);
 
-      // Determina qual será o limit aplicado
+      // Debug: Verifica se o usuário tem credenciais válidas
+      console.log('🔐 Executando job com credenciais do usuário logado...');
+      console.log('👤 Job Template ID:', jobTemplate.id);
+      console.log('🎯 Filtros atuais:', currentFilters);
+
+      // Verifica se o usuário pode acessar este job template específico
+      try {
+        console.log('🔍 Verificando se usuário pode acessar job templates...');
+        const templatesResponse = await awxService.getJobTemplates();
+        const canAccess = templatesResponse.results.some(t => t.id === jobTemplate.id);
+        console.log('✅ Usuário pode acessar este job template:', canAccess);
+      } catch (permError) {
+        console.warn('⚠️ Erro ao verificar acesso aos job templates:', permError);
+      }      // Determina qual será o limit aplicado
       let limitInfo = 'todo inventário (sem limit)';
       if (currentFilters?.selectedServers && currentFilters.selectedServers.length > 0) {
         limitInfo = currentFilters.selectedServers.length === 1 
@@ -589,6 +544,7 @@ const JobExecutionModalComponent = ({
         }
       });
 
+      console.log('🚀 Tentando executar job template...');
       const job = await awxService.launchJobTemplate(
         jobTemplate.id,
         {}, // extra_vars vazias por padrão
@@ -596,9 +552,9 @@ const JobExecutionModalComponent = ({
           systemSigla: currentFilters?.systemSigla || 'all',
           selectedGroup: currentFilters?.selectedGroup || '',
           selectedServers: currentFilters?.selectedServers || [],
-          authToken: authToken,
         }
       );
+      console.log('✅ Job template executado com sucesso:', job);
       
       setExecutionResult({
         success: true,
@@ -615,22 +571,69 @@ const JobExecutionModalComponent = ({
       console.error('❌ Erro na execução do job template:', error);
       
       let errorMessage = 'Erro desconhecido';
+      let errorDetails: any = {};
+      
       if (error instanceof Error) {
         errorMessage = error.message;
         
-        // Mensagens de erro mais amigáveis
-        if (error.message.includes('inventory is missing')) {
-          errorMessage = 'Erro: Inventário não encontrado. Verifique se existe um inventário chamado "sistemas" no AWX.';
-        } else if (error.message.includes('Bad Request')) {
-          errorMessage = 'Erro na requisição: Verifique se todos os parâmetros estão corretos.';
-        } else if (error.message.includes('conectividade')) {
-          errorMessage = 'Erro de conexão: Verifique se o AWX está acessível.';
+        // Tenta extrair detalhes técnicos do erro
+        try {
+          // Se o erro vem do awx service, pode conter informações estruturadas
+          const errorMatch = error.message.match(/(\d{3})\s*-\s*(\w+).*URL:\s*([^\s]+)/);
+          if (errorMatch) {
+            errorDetails.status = parseInt(errorMatch[1]);
+            errorDetails.statusText = errorMatch[2];
+            errorDetails.url = errorMatch[3];
+          }
+          
+          // Extrai a mensagem detalhada do JSON errorText (múltiplos formatos)
+          const errorTextPatterns = [
+            /errorText:\s*'([^']+)'/,           // errorText: '{json}'
+            /errorText:\s*"([^"]+)"/,           // errorText: "{json}"
+            /"errorText":\s*"([^"]+)"/,         // "errorText": "{json}"
+            /errorText['"]*:\s*['"]*([^'"]+)['"]*/ // Formato mais flexível
+          ];
+          
+          for (const pattern of errorTextPatterns) {
+            const match = error.message.match(pattern);
+            if (match) {
+              try {
+                const errorJson = JSON.parse(match[1]);
+                if (errorJson.detail) {
+                  errorDetails.errorText = errorJson.detail;
+                  errorDetails.serverMessage = errorJson.detail;
+                  break; // Para no primeiro match bem-sucedido
+                }
+              } catch (jsonError) {
+                // Se não conseguir fazer parse do JSON, tenta próximo padrão
+                continue;
+              }
+            }
+          }
+          
+          // Fallback: tenta extrair JSON diretamente da mensagem
+          const jsonMatch = error.message.match(/\{"detail":"([^"]+)"\}/);
+          if (jsonMatch && !errorDetails.serverMessage) {
+            errorDetails.serverMessage = jsonMatch[1];
+            errorDetails.errorText = jsonMatch[1];
+          }
+          
+          // Debug: mostra o que foi capturado
+          if (errorDetails.serverMessage) {
+            console.log('🎯 Mensagem do destino capturada:', errorDetails.serverMessage);
+          }
+        } catch (parseError) {
+          console.warn('Não foi possível extrair detalhes do erro:', parseError);
         }
+        
+        // Mantém a mensagem original do erro para mostrar detalhes estruturados
+        errorMessage = error.message;
       }
       
       setExecutionResult({
         success: false,
-        message: errorMessage
+        message: errorMessage,
+        errorDetails: Object.keys(errorDetails).length > 0 ? errorDetails : undefined
       });
     } finally {
       setIsExecuting(false);
@@ -657,31 +660,10 @@ const JobExecutionModalComponent = ({
     <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <Play className="w-5 h-5 text-primary" />
-              Executar Automação
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAuthPopup(true)}
-              className="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-gray-100"
-              title={isAuthenticated ? "Autenticado - Clique para reautenticar" : "Clique para autenticar"}
-            >
-              {isAuthenticated ? (
-                <>
-                  <Lock className="w-4 h-4 text-green-600" />
-                  <span className="text-xs text-green-600">Autenticado</span>
-                </>
-              ) : (
-                <>
-                  <Unlock className="w-4 h-4 text-gray-500" />
-                  <span className="text-xs text-gray-500">Autenticar</span>
-                </>
-              )}
-            </Button>
-          </div>
+          <DialogTitle className="flex items-center gap-2">
+            <Play className="w-5 h-5 text-primary" />
+            Executar Automação
+          </DialogTitle>
 {!executionResult && (
             <DialogDescription>
               Confirme os detalhes antes de executar a automação
@@ -891,6 +873,48 @@ const JobExecutionModalComponent = ({
             getStatusDisplay={getStatusDisplay}
           />
 
+          {/* Erro de Execução - quando falha antes de criar o job */}
+          {executionResult && !executionResult.success && (
+            <div className="border rounded-lg p-4 bg-red-50 border-red-200">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium mb-3 text-red-800">
+                    Falha na Execução
+                  </p>
+                  
+                  {/* Mensagem do servidor destacada */}
+                  {executionResult.errorDetails?.serverMessage && (
+                    <div className="mb-3">
+                      <p className="text-sm text-red-800 font-semibold">
+                        🎯 "{executionResult.errorDetails.serverMessage}"
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Detalhes técnicos fluidos */}
+                  {executionResult.errorDetails && (
+                    <div className="space-y-1 text-sm text-red-600">
+                      {executionResult.errorDetails.status && (
+                        <div>
+                          <span className="font-medium">Status:</span> {executionResult.errorDetails.status} {executionResult.errorDetails.statusText}
+                        </div>
+                      )}
+                      {executionResult.errorDetails.url && (
+                        <div>
+                          <span className="font-medium">Endpoint:</span> <code className="text-xs font-mono bg-red-100 px-1 py-0.5 rounded">{executionResult.errorDetails.url}</code>
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-medium">Horário:</span> {new Date().toLocaleString('pt-BR')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Botão discreto para visualizar logs após conclusão */}
           {currentJob && ['successful', 'failed', 'error', 'canceled'].includes(jobStatus) && (
             <div className="flex justify-center">
@@ -993,18 +1017,13 @@ const JobExecutionModalComponent = ({
             >
               {isExecuting ? (
                 <>
-                  <Clock className="w-4 h-4 animate-pulse" />
-                  Executando...
+                  <Hourglass className="w-4 h-4 animate-pulse" />
+                  Aguardando...
                 </>
               ) : executionResult?.success ? (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
                   Executado!
-                </>
-              ) : isAuthenticated ? (
-                <>
-                  <Shield className="w-4 h-4" />
-                  Confirmar Execução
                 </>
               ) : (
                 <>
@@ -1018,108 +1037,7 @@ const JobExecutionModalComponent = ({
       </DialogContent>
     </Dialog>
 
-    {/* Modal de Autenticação */}
-    <Dialog open={showAuthPopup} onOpenChange={setShowAuthPopup}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-orange-600" />
-            Autenticação de Segurança
-          </DialogTitle>
-          <DialogDescription>
-            Por motivos de segurança, é necessário fornecer seu token de acesso AWX para executar automações.
-          </DialogDescription>
-        </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="auth-token-popup" className="text-sm font-medium">
-              Token de Acesso AWX
-            </Label>
-            <div className="relative mt-2">
-              <Input
-                id="auth-token-popup"
-                type={showToken ? "text" : "password"}
-                value={authToken}
-                onChange={(e) => handleTokenChange(e.target.value)}
-                placeholder="Insira seu token de autenticação"
-                className="pr-10 font-mono text-sm"
-                disabled={isValidatingToken}
-                autoFocus
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                onClick={() => setShowToken(!showToken)}
-                disabled={isValidatingToken}
-              >
-                {showToken ? (
-                  <EyeOff className="w-4 h-4 text-gray-500" />
-                ) : (
-                  <Eye className="w-4 h-4 text-gray-500" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Status de validação */}
-          {authError && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
-              <p className="text-sm text-red-700">{authError}</p>
-            </div>
-          )}
-
-          {isValidatingToken && (
-            <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <RefreshCw className="w-4 h-4 animate-spin text-blue-600 flex-shrink-0" />
-              <p className="text-sm text-blue-700">Validando token...</p>
-            </div>
-          )}
-
-          {isAuthenticated && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-              <p className="text-sm text-green-700">Token válido! Você pode executar a automação.</p>
-            </div>
-          )}
-
-          {/* Botões */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowAuthPopup(false)}
-              disabled={isValidatingToken}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => {
-                if (isAuthenticated) {
-                  setShowAuthPopup(false);
-                }
-              }}
-              disabled={!isAuthenticated || isValidatingToken}
-              className="gap-2"
-            >
-              {isAuthenticated ? (
-                <>
-                  <Lock className="w-4 h-4" />
-                  Autenticado
-                </>
-              ) : (
-                <>
-                  <Unlock className="w-4 h-4" />
-                  Aguardando...
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
 
     {/* Modal de Logs Detalhados */}
     <LogsModal

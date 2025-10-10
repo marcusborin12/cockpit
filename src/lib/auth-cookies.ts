@@ -9,7 +9,7 @@ export interface AuthCookie {
 }
 
 const COOKIE_NAME = 'awx_auth_session';
-const COOKIE_MAX_AGE = 8 * 60 * 60 * 1000; // 8 horas em milissegundos
+const COOKIE_MAX_AGE = 10 * 60 * 1000; // 10 minutos em milissegundos
 
 /**
  * Salva as credenciais de autenticação em cookie de sessão
@@ -29,7 +29,7 @@ export const setAuthCookie = (credentials: string, username: string): void => {
   // Define o cookie com configurações seguras
   document.cookie = `${COOKIE_NAME}=${cookieValue}; expires=${expiresDate.toUTCString()}; path=/; secure=false; samesite=strict`;
   
-  console.log('🍪 Cookie de autenticação salvo:', { username, expiresAt: expiresDate });
+  console.log('🍪 Sessão criada (10min):', { username, expira: expiresDate.toLocaleTimeString() });
 };
 
 /**
@@ -43,7 +43,7 @@ export const getAuthCookie = (): AuthCookie | null => {
     );
 
     if (!authCookie) {
-      console.log('🍪 Cookie de autenticação não encontrado');
+      // Log silencioso - cookie não encontrado é normal em primeira visita
       return null;
     }
 
@@ -52,15 +52,18 @@ export const getAuthCookie = (): AuthCookie | null => {
 
     // Verifica se o cookie não expirou
     if (authData.expiresAt < Date.now()) {
-      console.log('🍪 Cookie de autenticação expirado');
+      console.log('🍪 Cookie de autenticação expirado (10min)');
       removeAuthCookie();
       return null;
     }
 
-    console.log('🍪 Cookie de autenticação recuperado:', { 
-      username: authData.username, 
-      expiresAt: new Date(authData.expiresAt) 
-    });
+    // Log apenas em debug mode para reduzir ruído no console
+    if (import.meta.env.DEV) {
+      console.log('🍪 Cookie válido:', { 
+        username: authData.username, 
+        expiresEm: Math.round((authData.expiresAt - Date.now()) / 1000 / 60) + 'min'
+      });
+    }
     
     return authData;
   } catch (error) {
