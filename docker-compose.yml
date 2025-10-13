@@ -1,0 +1,30 @@
+# Docker Compose para desenvolvimento local
+version: '3.8'
+
+services:
+  cockpit-automacao:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - VITE_PORTAL_BASE_URL=http://192.168.15.52:8080
+      - AWX_BACKEND_URL=http://192.168.15.52:8080
+      - VITE_CACHE_DASHBOARD_STATS_TTL=5
+      - VITE_CACHE_MONTHLY_DATA_TTL=60
+      - VITE_CACHE_RECENT_EXECUTIONS_TTL=2
+      - VITE_ANIMATION_DURATION=2000
+      - VITE_ANIMATION_ENABLED=true
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cockpit-network
+
+networks:
+  cockpit-network:
+    driver: bridge

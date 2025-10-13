@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cockpit-automacao
+  labels:
+    app: cockpit-automacao
+    version: "1.0.2"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: cockpit-automacao
+  template:
+    metadata:
+      labels:
+        app: cockpit-automacao
+        version: "1.0.2"
+    spec:
+      containers:
+      - name: cockpit-automacao
+        image: cockpit-automacao:1.0.2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: VITE_PORTAL_BASE_URL
+          value: "http://192.168.15.52:8080"
+        - name: AWX_BACKEND_URL
+          value: "http://192.168.15.52:8080"
+        - name: VITE_CACHE_DASHBOARD_STATS_TTL
+          value: "5"
+        - name: VITE_CACHE_MONTHLY_DATA_TTL
+          value: "60"
+        - name: VITE_CACHE_RECENT_EXECUTIONS_TTL
+          value: "2"
+        - name: VITE_ANIMATION_DURATION
+          value: "2000"
+        - name: VITE_ANIMATION_ENABLED
+          value: "true"
+        - name: NODE_ENV
+          value: "production"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 6
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-pid
+          mountPath: /var/run
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-pid
+        emptyDir: {}
+      securityContext:
+        fsGroup: 1001
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cockpit-automacao-service
+  labels:
+    app: cockpit-automacao
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: cockpit-automacao
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cockpit-automacao-ingress
+  labels:
+    app: cockpit-automacao
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+spec:
+  rules:
+  - host: cockpit.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cockpit-automacao-service
+            port:
+              number: 8080
+  # Configuração alternativa para IP direto (sem domínio)
+  - http:
+      paths:
+      - path: /cockpit
+        pathType: Prefix
+        backend:
+          service:
+            name: cockpit-automacao-service
+            port:
+              number: 8080
