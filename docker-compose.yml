@@ -8,7 +8,6 @@ services:
       - "8080:8080"
     environment:
       - VITE_AWX_API=http://192.168.15.52:8080
-      - AWX_BACKEND_URL=http://192.168.15.52:8080
       - VITE_CACHE_DASHBOARD_STATS_TTL=5
       - VITE_CACHE_MONTHLY_DATA_TTL=60
       - VITE_CACHE_RECENT_EXECUTIONS_TTL=2
