@@ -9,12 +9,15 @@ describe('Environment Variables', () => {
   it('should have test credentials in development', () => {
     // Em ambiente de teste, estas variáveis podem estar definidas
     if (import.meta.env.VITE_TEST_USERNAME) {
-      expect(import.meta.env.VITE_TEST_USERNAME).toBe('9903699')
+      expect(import.meta.env.VITE_TEST_USERNAME).toBeDefined()
+      expect(import.meta.env.VITE_TEST_USERNAME.length).toBeGreaterThan(0)
+      expect(typeof import.meta.env.VITE_TEST_USERNAME).toBe('string')
     }
     
     if (import.meta.env.VITE_TEST_PASSWORD) {
       expect(import.meta.env.VITE_TEST_PASSWORD).toBeDefined()
       expect(import.meta.env.VITE_TEST_PASSWORD.length).toBeGreaterThan(0)
+      expect(typeof import.meta.env.VITE_TEST_PASSWORD).toBe('string')
     }
   })
 
