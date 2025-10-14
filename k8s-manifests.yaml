@@ -32,8 +32,6 @@ spec:
         env:
         - name: VITE_AWX_API
           value: "http://192.168.15.52:8080"
-        - name: AWX_BACKEND_URL
-          value: "http://192.168.15.52:8080"
         - name: VITE_CACHE_DASHBOARD_STATS_TTL
           value: "5"
         - name: VITE_CACHE_MONTHLY_DATA_TTL
