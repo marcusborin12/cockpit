@@ -62,7 +62,6 @@ export const Layout = ({ children }: LayoutProps) => {
           <div className="text-xs text-muted-foreground text-center">
             <div className="font-medium">Cockpit Automação</div>
             <div className="mt-1">{getVersionString()}</div>
-            <div className="mt-1 text-green-600 font-medium">BETA</div>
           </div>
         </div>
       </aside>
