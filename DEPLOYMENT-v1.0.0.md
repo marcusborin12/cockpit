@@ -49,14 +49,15 @@ dist/
 
 ### Variáveis de Ambiente (.env):
 ```bash
-# Configuração do Portal AWX
-VITE_PORTAL_BASE_URL="http://192.168.15.52:8080"
-VITE_PORTAL_TOKEN="TjPwEWybS7e2hx5GiJ8osEVGmVUlYk"
+# Configuração do AWX
+VITE_AWX_BASE_URL="http://192.168.15.52:8080/api/v2"
 
 # Configurações da aplicação (se necessário)
 # VITE_API_BASE_URL="http://localhost:3000"
 # VITE_APP_NAME="Cockpit Automação"
 ```
+
+**Nota**: A autenticação agora é feita via cookies de sessão com Basic Auth. Não é mais necessário configurar tokens de autenticação no arquivo .env.
 
 ## 🚀 Deploy Instructions
 
@@ -129,10 +130,11 @@ add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 
 ## 🐛 Troubleshooting
 
 ### Problemas Comuns:
-1. **Login não funciona**: Verificar VITE_PORTAL_BASE_URL
+1. **Login não funciona**: Verificar VITE_AWX_BASE_URL e credenciais de acesso
 2. **CORS Error**: Configurar proxy no servidor web
-3. **Dados não carregam**: Verificar VITE_PORTAL_TOKEN
+3. **Dados não carregam**: Verificar se a sessão de autenticação é válida (fazer login novamente)
 4. **Rota 404**: Configurar fallback para SPA
+5. **Sessão expirada**: Fazer login novamente (sessões expiram em 10 minutos)
 
 ### Logs de Debug:
 ```bash

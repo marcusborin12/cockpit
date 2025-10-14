@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { hasValidAuthSession, getSessionCredentials, getSessionUsername } from '@/lib/auth-cookies';
 
 interface ConnectionTestResult {
   step: string;
@@ -21,37 +22,29 @@ export const AWXConnectionTest = () => {
 
     const testResults: ConnectionTestResult[] = [];
 
-    // Teste 1: Verificar variáveis de ambiente
+    // Teste 1: Verificar autenticação por sessão
     try {
-      const baseUrl = import.meta.env.VITE_PORTAL_BASE_URL;
-      const token = import.meta.env.VITE_PORTAL_TOKEN;
-
-      if (!baseUrl) {
+      if (!hasValidAuthSession()) {
         testResults.push({
-          step: 'Variáveis de Ambiente',
+          step: 'Autenticação',
           success: false,
-          message: 'VITE_PORTAL_BASE_URL não configurada',
-        });
-      } else if (!token) {
-        testResults.push({
-          step: 'Variáveis de Ambiente',
-          success: false,
-          message: 'VITE_PORTAL_TOKEN não configurada',
+          message: 'Sessão de autenticação não encontrada ou expirada',
         });
       } else {
+        const username = getSessionUsername();
         testResults.push({
-          step: 'Variáveis de Ambiente',
+          step: 'Autenticação',
           success: true,
-          message: `URL: ${baseUrl}`,
-          details: { baseUrl, tokenLength: token.length }
+          message: `Usuário: ${username || 'N/A'}`,
+          details: { username, hasCredentials: !!getSessionCredentials() }
         });
       }
       setResults([...testResults]);
     } catch (error) {
       testResults.push({
-        step: 'Variáveis de Ambiente',
+        step: 'Autenticação',
         success: false,
-        message: 'Erro ao verificar variáveis',
+        message: 'Erro ao verificar autenticação',
         details: error
       });
       setResults([...testResults]);
@@ -88,17 +81,17 @@ export const AWXConnectionTest = () => {
       setResults([...testResults]);
     }
 
-    // Teste 3: Verificar autenticação
+    // Teste 3: Verificar endpoint /me/ com autenticação por sessão
     try {
       const baseUrl = import.meta.env.DEV ? '/awx-api' : import.meta.env.VITE_AWX_BASE_URL;
-      const token = import.meta.env.VITE_AWX_TOKEN;
+      const credentials = getSessionCredentials();
       
-      if (baseUrl && token) {
+      if (baseUrl && credentials) {
         const response = await fetch(`${baseUrl}/me/`, {
           method: 'GET',
           mode: 'cors',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Basic ${credentials}`,
             'Content-Type': 'application/json',
           },
         });
@@ -106,7 +99,7 @@ export const AWXConnectionTest = () => {
         if (response.ok) {
           const data = await response.json();
           testResults.push({
-            step: 'Autenticação',
+            step: 'Endpoint /me/',
             success: true,
             message: `Usuário: ${data.username || 'N/A'}`,
             details: data
@@ -114,17 +107,23 @@ export const AWXConnectionTest = () => {
         } else {
           const errorText = await response.text().catch(() => 'No response body');
           testResults.push({
-            step: 'Autenticação',
+            step: 'Endpoint /me/',
             success: false,
             message: `${response.status} - ${response.statusText}`,
             details: { errorText, status: response.status }
           });
         }
+      } else {
+        testResults.push({
+          step: 'Endpoint /me/',
+          success: false,
+          message: 'URL base ou credenciais não disponíveis',
+        });
       }
       setResults([...testResults]);
     } catch (error) {
       testResults.push({
-        step: 'Autenticação',
+        step: 'Endpoint /me/',
         success: false,
         message: error instanceof Error ? error.message : 'Erro desconhecido',
         details: error
@@ -135,14 +134,14 @@ export const AWXConnectionTest = () => {
     // Teste 4: Verificar endpoint de jobs
     try {
       const baseUrl = import.meta.env.DEV ? '/awx-api' : import.meta.env.VITE_AWX_BASE_URL;
-      const token = import.meta.env.VITE_AWX_TOKEN;
+      const credentials = getSessionCredentials();
       
-      if (baseUrl && token) {
+      if (baseUrl && credentials) {
         const response = await fetch(`${baseUrl}/jobs/?page_size=1`, {
           method: 'GET',
           mode: 'cors',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Basic ${credentials}`,
             'Content-Type': 'application/json',
           },
         });
@@ -164,6 +163,12 @@ export const AWXConnectionTest = () => {
             details: { errorText, status: response.status }
           });
         }
+      } else {
+        testResults.push({
+          step: 'Endpoint Jobs',
+          success: false,
+          message: 'URL base ou credenciais não disponíveis',
+        });
       }
       setResults([...testResults]);
     } catch (error) {
@@ -237,9 +242,10 @@ export const AWXConnectionTest = () => {
             <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
               <li>Verificar se o AWX está acessível na rede (ping {import.meta.env.VITE_AWX_BASE_URL?.split('//')[1]?.split(':')[0]})</li>
               <li>Verificar se o AWX tem CORS configurado para permitir requisições do frontend</li>
-              <li>Verificar se o token de autenticação ainda é válido</li>
+              <li>Verificar se suas credenciais de autenticação ainda são válidas</li>
               <li>Verificar se há firewall bloqueando a conexão</li>
               <li>Tentar acessar {import.meta.env.VITE_AWX_BASE_URL} diretamente no navegador</li>
+              <li>Fazer login novamente para renovar a sessão de autenticação</li>
             </ul>
           </AlertDescription>
         </Alert>

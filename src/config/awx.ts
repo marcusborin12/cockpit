@@ -201,16 +201,18 @@ export const buildAwxUrl = (endpoint: string, params?: Record<string, string | n
   return url;
 };
 
-// Função helper para obter token de autenticação
+// Função helper para obter credenciais de autenticação das sessões
 export const getAwxAuthHeaders = () => {
-  const token = import.meta.env.VITE_PORTAL_TOKEN || localStorage.getItem('portal_token');
+  // Importa dinamicamente para evitar problemas de dependência circular
+  const { getSessionCredentials } = require('@/lib/auth-cookies');
+  const credentials = getSessionCredentials();
   
-  if (!token) {
-    throw new Error('Token não encontrado. Configure VITE_PORTAL_TOKEN ou faça login.');
+  if (!credentials) {
+    throw new Error('Sessão de autenticação não encontrada. Faça login novamente.');
   }
   
   return {
     ...AWX_CONFIG.DEFAULT_HEADERS,
-    'Authorization': `Bearer ${token}`,
+    'Authorization': `Basic ${credentials}`,
   };
 };

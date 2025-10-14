@@ -424,15 +424,10 @@ class AWXService {
 
   /**
    * Constrói a URL para visualizar logs de um job em nova aba
+   * Usa as credenciais da sessão atual para autenticação
    */
   getJobLogsUrl(jobId: number): string {
     const baseUrl = import.meta.env.VITE_PORTAL_BASE_URL || 'http://localhost:8080';
-    const token = import.meta.env.VITE_PORTAL_TOKEN;
-    
-    if (token) {
-      return `${baseUrl}/api/v2/jobs/${jobId}/stdout/?format=txt_download&token=${token}`;
-    }
-    
     return `${baseUrl}/api/v2/jobs/${jobId}/stdout/?format=txt_download`;
   }
 

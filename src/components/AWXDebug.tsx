@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { getSessionCredentials, getSessionUsername, hasValidAuthSession } from '@/lib/auth-cookies';
 
 export const AWXDebug = () => {
   const [results, setResults] = useState<string[]>([]);
@@ -11,10 +12,19 @@ export const AWXDebug = () => {
     try {
       // Teste direto do endpoint de jobs
       const baseUrl = '/api';
-      const token = import.meta.env.VITE_PORTAL_TOKEN;
+      const credentials = getSessionCredentials();
+      const username = getSessionUsername();
       
       logs.push(`🔍 Base URL: ${baseUrl}`);
-      logs.push(`🔑 Token length: ${token?.length || 0}`);
+      logs.push(`� Username: ${username || 'N/A'}`);
+      logs.push(`🔑 Has credentials: ${!!credentials}`);
+      logs.push(`🔒 Session valid: ${hasValidAuthSession()}`);
+      
+      if (!credentials) {
+        logs.push(`❌ Nenhuma credencial de sessão encontrada. Faça login primeiro.`);
+        setResults(logs);
+        return;
+      }
       
       // Teste 1: Jobs básico
       const jobsUrl = `${baseUrl}/jobs/`;
@@ -23,7 +33,7 @@ export const AWXDebug = () => {
       const response = await fetch(jobsUrl, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Basic ${credentials}`,
           'Content-Type': 'application/json',
         },
       });
