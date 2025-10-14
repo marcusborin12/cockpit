@@ -3,7 +3,7 @@ export const AWX_CONFIG = {
   // URL base (usa proxy em desenvolvimento, URL completa em produção)
   BASE_URL: import.meta.env.DEV 
     ? '/api' 
-    : `${import.meta.env.VITE_PORTAL_BASE_URL}/api/v2`,
+    : `${import.meta.env.VITE_AWX_API}/api/v2`,
   
   // Timeout para requisições (em milissegundos)
   TIMEOUT: 30000,
@@ -160,7 +160,7 @@ export const buildAwxUrl = (endpoint: string, params?: Record<string, string | n
   
   console.log('🔍 Debug buildAwxUrl:', {
     isDev: import.meta.env.DEV,
-    vitePortalBaseUrl: import.meta.env.VITE_PORTAL_BASE_URL,
+    viteAwxApi: import.meta.env.VITE_AWX_API,
     baseUrl,
     endpoint
   });

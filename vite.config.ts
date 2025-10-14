@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       port: 8080,
       proxy: {
         '/api': {
-          target: env.VITE_PORTAL_BASE_URL || 'http://localhost:8080',
+          target: env.VITE_AWX_API || 'http://localhost:8080',
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, '/api/v2'),

@@ -93,7 +93,7 @@ Edite o arquivo `k8s-manifests.yaml` para ajustar:
 
 ```yaml
 env:
-- name: VITE_PORTAL_BASE_URL
+- name: VITE_AWX_API
   value: "http://SEU-AWX-SERVER:8080"
 - name: AWX_BACKEND_URL
   value: "http://SEU-AWX-SERVER:8080"

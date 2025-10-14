@@ -30,7 +30,7 @@ spec:
           containerPort: 8080
           protocol: TCP
         env:
-        - name: VITE_PORTAL_BASE_URL
+        - name: VITE_AWX_API
           value: "http://192.168.15.52:8080"
         - name: AWX_BACKEND_URL
           value: "http://192.168.15.52:8080"

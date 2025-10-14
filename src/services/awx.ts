@@ -385,7 +385,7 @@ class AWXService {
       url, 
       baseUrl: AWX_CONFIG.BASE_URL,
       isDev: import.meta.env.DEV,
-      portalBaseUrl: import.meta.env.VITE_PORTAL_BASE_URL,
+      portalBaseUrl: import.meta.env.VITE_AWX_API,
       user: getSessionUsername()
     });
     
@@ -427,7 +427,7 @@ class AWXService {
    * Usa as credenciais da sessão atual para autenticação
    */
   getJobLogsUrl(jobId: number): string {
-    const baseUrl = import.meta.env.VITE_PORTAL_BASE_URL || 'http://localhost:8080';
+    const baseUrl = import.meta.env.VITE_AWX_API || 'http://localhost:8080';
     return `${baseUrl}/api/v2/jobs/${jobId}/stdout/?format=txt_download`;
   }
 

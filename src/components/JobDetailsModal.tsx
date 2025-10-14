@@ -294,7 +294,7 @@ export const JobDetailsModal = ({ isOpen, onClose, jobId }: JobDetailsModalProps
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open(`${import.meta.env.VITE_PORTAL_BASE_URL}/#/jobs/playbook/${jobDetails.id}`, '_blank')}
+                  onClick={() => window.open(`${import.meta.env.VITE_AWX_API}/#/jobs/playbook/${jobDetails.id}`, '_blank')}
                 >
                   <ExternalLink className="w-4 h-4 mr-1" />
                   Ver no AWX
