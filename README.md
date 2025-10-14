@@ -8,7 +8,7 @@
 ![TypeScript](https://img.shields.io/badge/typescript-5.8.3-blue.svg)
 ![Vite](https://img.shields.io/badge/vite-5.4.19-purple.svg)
 
-**Interface web moderna para gerenciamento e execução de automações AWX/Ansible Tower**
+**Interface web moderna para gerenciamento e execução de automações AWX Community**
 
 [Demonstração](#demonstração) • [Instalação](#instalação) • [Configuração](#configuração) • [API](#api) • [Deploy](#deploy)
 
@@ -18,7 +18,7 @@
 
 ## 📋 Visão Geral
 
-O **Cockpit de Automação AWX** é uma aplicação web React que oferece uma interface intuitiva e moderna para interação com servidores AWX/Ansible Tower. Desenvolvida para simplificar o gerenciamento de automações, oferece funcionalidades avançadas de filtragem, execução em tempo real e monitoramento de jobs.
+O **Cockpit de Automação AWX** é uma aplicação web React que oferece uma interface intuitiva e moderna para interação com servidores AWX Community. Desenvolvida para simplificar o gerenciamento de automações, oferece funcionalidades avançadas de filtragem, execução em tempo real e monitoramento de jobs.
 
 ### ✨ Características Principais
 
