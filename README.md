@@ -229,22 +229,59 @@ Para configurações detalhadas, consulte:
 ### Executar Testes
 
 ```bash
-# Testes unitários
+# Testes unitários em modo watch
 npm run test
 
-# Cobertura
+# Executar testes uma vez
+npm run test:run
+
+# Interface gráfica para testes
+npm run test:ui
+
+# Cobertura de código
 npm run test:coverage
 
 # Linting
 npm run lint
 ```
 
-### Teste de Conectividade
+### Estrutura de Testes
 
-A aplicação inclui uma ferramenta de debug integrada:
-1. Acesse `/debug` na aplicação
-2. Execute os testes de conectividade AWX
-3. Verifique logs detalhados no console
+- **Vitest** - Framework de testes rápido e moderno
+- **React Testing Library** - Testes centrados no usuário
+- **jsdom** - Ambiente DOM para testes
+- **Mock Functions** - Simulação de APIs e dependências
+
+### Testes Implementados
+
+- ✅ **Utilitários** (`utils.test.ts`) - Funções auxiliares
+- ✅ **Autenticação** (`auth-cookies.test.ts`) - Sistema de cookies
+- ✅ **Componentes UI** (`button.test.tsx`) - Componentes base
+- 🔄 **Integração** - Testes de componentes complexos
+
+### Teste de Conectividade Manual
+
+Para validar a conectividade AWX:
+1. Execute `npm run dev`
+2. Acesse a aplicação em desenvolvimento
+3. Use as ferramentas de debug integradas no perfil do usuário
+4. Verifique logs detalhados no console do navegador
+
+### Variáveis de Teste
+
+Para facilitar os testes durante o desenvolvimento, utilize as variáveis de ambiente:
+
+```bash
+# No arquivo .env
+VITE_TEST_USERNAME="usuario:9903699"
+VITE_TEST_PASSWORD="Be11&Noah13"
+```
+
+**Importante:**
+- Essas variáveis são apenas para ambiente de desenvolvimento (`import.meta.env.DEV`)
+- Um botão "Usar Credenciais de Teste" aparecerá na tela de login em modo dev
+- Nunca inclua credenciais reais em variáveis de ambiente para produção
+- Use sempre credenciais de teste específicas para desenvolvimento
 
 ---
 

@@ -135,6 +135,22 @@ const Login = () => {
               {(loading || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Entrar
             </Button>
+            
+            {/* Botão de teste - apenas em desenvolvimento */}
+            {import.meta.env.DEV && import.meta.env.VITE_TEST_USERNAME && import.meta.env.VITE_TEST_PASSWORD && (
+              <Button 
+                type="button"
+                variant="outline"
+                className="w-full h-11 text-base font-medium" 
+                disabled={loading || isLoading}
+                onClick={() => {
+                  setUsername(import.meta.env.VITE_TEST_USERNAME);
+                  setPassword(import.meta.env.VITE_TEST_PASSWORD);
+                }}
+              >
+                Usar Credenciais de Teste
+              </Button>
+            )}
           </form>
         </CardContent>
       </Card>

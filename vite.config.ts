@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -39,6 +40,20 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(process.cwd(), "src"),
       },
       extensions: ['.ts', '.tsx', '.js', '.jsx'] // garante que todas extensões sejam resolvidas
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.ts'],
+      css: true,
+      reporters: ['verbose'],
+      coverage: {
+        reporter: ['text', 'json', 'html'],
+        exclude: [
+          'node_modules/',
+          'src/test/',
+        ],
+      },
     },
   };
 });
