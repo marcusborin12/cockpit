@@ -28,36 +28,24 @@ pids
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
+# Coverage directory
 coverage
 .nyc_output
 
 # Git
 .git
-.gitignore
 
-# Editor directories and files
+# Editor directories
 .vscode/*
-!.vscode/extensions.json
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
-# Documentation
-README.md
-CHANGELOG.md
-*.md
-
-# Development files
-.prettierrc
-.eslintrc*
-*.config.js
-*.config.ts
-tsconfig*.json
+# Development and config files (não ignorar Vite e TypeScript configs)
+# .prettierrc
+# .eslintrc*
+# *.config.js
+# *.config.ts
+# tsconfig*.json
 
 # Testing
 __tests__
@@ -78,4 +66,3 @@ Thumbs.db
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db

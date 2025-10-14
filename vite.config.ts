@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => {
   // Carrega variáveis de ambiente
   const env = loadEnv(mode, process.cwd(), '');
-  
+
   return {
     server: {
       host: "::",
@@ -20,12 +20,11 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/api/, '/api/v2'),
           configure: (proxy, options) => {
             console.log('🔧 Proxy configurado para:', options.target);
-            
-            // Log de requisições proxy
+
             proxy.on('proxyReq', (proxyReq, req, res) => {
               console.log('📤 Proxy Request:', req.method, req.url, 'to', options.target + proxyReq.path);
             });
-            
+
             proxy.on('proxyRes', (proxyRes, req, res) => {
               console.log('📥 Proxy Response:', proxyRes.statusCode, req.url);
             });
@@ -36,8 +35,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
+        // Ajuste aqui: usar process.cwd() ao invés de __dirname
+        "@": path.resolve(process.cwd(), "src"),
       },
+      extensions: ['.ts', '.tsx', '.js', '.jsx'] // garante que todas extensões sejam resolvidas
     },
   };
 });
