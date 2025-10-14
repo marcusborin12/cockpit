@@ -10,8 +10,6 @@
 
 **Interface web moderna para gerenciamento e execução de automações AWX Community**
 
-[Demonstração](#demonstração) • [Instalação](#instalação) • [Configuração](#configuração) • [API](#api) • [Deploy](#deploy)
-
 </div>
 
 ---
