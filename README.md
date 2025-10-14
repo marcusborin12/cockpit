@@ -13,51 +13,42 @@ Esta versão beta inclui todas as funcionalidades principais:
 - ✅ Interface responsiva e moderna
 - ✅ Integração completa com AWX API
 
-## How can I edit this code?
+## 🛠️ Como Desenvolver
 
-There are several ways of editing your application.
+### Pré-requisitos
+- Node.js 18+ 
+- npm ou yarn
+- Git
 
-**Use Lovable**
+### Instalação Local
+```bash
+# Clone o repositório
+git clone https://github.com/marcusborin12/cockpit.git
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/ff916825-3700-4d42-aa86-71960f062368) and start prompting.
+# Navegue para o diretório
+cd cockpit
 
-Changes made via Lovable will be committed automatically to this repo.
+# Instale as dependências
+npm install
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Execute em modo desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Build para Produção
+```bash
+# Build da aplicação
+npm run build
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+# Preview do build local
+npm run preview
+```
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Deploy
+Consulte os arquivos de documentação:
+- `KUBERNETES.md` - Deploy em Kubernetes/minikube/k3s
+- `docker-compose.yml` - Execução local com Docker
+- `Dockerfile` - Containerização da aplicação
 
 ## 🛠️ Tecnologias
 
