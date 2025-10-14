@@ -304,7 +304,7 @@ Este projeto está licenciado sob a [MIT License](LICENSE).
 
 <div align="center">
 
-**Desenvolvido com ❤️ para automação eficiente**
+**Desenvolvido para automação eficiente**
 
 </div>
 
