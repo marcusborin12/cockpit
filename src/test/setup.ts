@@ -11,7 +11,11 @@ Object.defineProperty(window, 'import', {
         VITE_CACHE_DASHBOARD_STATS_TTL: '5',
         VITE_CACHE_MONTHLY_DATA_TTL: '60',
         VITE_CACHE_RECENT_EXECUTIONS_TTL: '2',
-        VITE_CACHE_VERSION: '1.0.1'
+        VITE_CACHE_VERSION: '1.0.1',
+        // Variáveis para teste do botão de credenciais
+        VITE_ENABLE_TEST_CREDENTIALS: 'true',
+        VITE_TEST_USERNAME: 'test_user',
+        VITE_TEST_PASSWORD: 'test_password'
       }
     }
   }

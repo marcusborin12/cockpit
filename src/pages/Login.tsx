@@ -136,8 +136,10 @@ const Login = () => {
               Entrar
             </Button>
             
-            {/* Botão de teste - apenas em desenvolvimento */}
-            {import.meta.env.DEV && import.meta.env.VITE_TEST_USERNAME && import.meta.env.VITE_TEST_PASSWORD && (
+            {/* Botão de teste - apenas habilitado explicitamente para testes automatizados */}
+            {import.meta.env.VITE_ENABLE_TEST_CREDENTIALS === 'true' && 
+             import.meta.env.VITE_TEST_USERNAME && 
+             import.meta.env.VITE_TEST_PASSWORD && (
               <Button 
                 type="button"
                 variant="outline"
@@ -147,6 +149,7 @@ const Login = () => {
                   setUsername(import.meta.env.VITE_TEST_USERNAME);
                   setPassword(import.meta.env.VITE_TEST_PASSWORD);
                 }}
+                data-testid="use-test-credentials-button"
               >
                 Usar Credenciais de Teste
               </Button>

@@ -278,10 +278,11 @@ VITE_TEST_PASSWORD="Be11&Noah13"
 ```
 
 **Importante:**
-- Essas variáveis são apenas para ambiente de desenvolvimento (`import.meta.env.DEV`)
-- Um botão "Usar Credenciais de Teste" aparecerá na tela de login em modo dev
+- O botão "Usar Credenciais de Teste" só aparece quando `VITE_ENABLE_TEST_CREDENTIALS=true`
+- Esta funcionalidade deve ser usada apenas para testes automatizados
+- Para testes, use o arquivo `.env.test` com as variáveis apropriadas
 - Nunca inclua credenciais reais em variáveis de ambiente para produção
-- Use sempre credenciais de teste específicas para desenvolvimento
+- Use sempre credenciais de teste específicas para desenvolvimento e automação
 
 ---
 

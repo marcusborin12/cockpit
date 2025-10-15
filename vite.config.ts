@@ -7,6 +7,7 @@ import path from "path";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Carrega variáveis de ambiente
+  // Para testes, usa .env.test além do .env padrão
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
