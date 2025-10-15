@@ -66,10 +66,10 @@ graph TB
     AWX_CONFIG --> ENV
 
     %% Styling
-    classDef ui fill:#e1f5fe
-    classDef service fill:#f3e5f5
-    classDef external fill:#fff3e0
-    classDef config fill:#e8f5e8
+    classDef ui fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#FFFFFF
+    classDef service fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px,color:#FFFFFF
+    classDef external fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#FFFFFF
+    classDef config fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#FFFFFF
     
     class L,D,A,E,Layout ui
     class AS,AC_LIB,DC service
