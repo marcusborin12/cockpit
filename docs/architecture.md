@@ -85,21 +85,34 @@ Componentes de interface que representam as rotas principais da aplicação.
 ```mermaid
 graph LR
     subgraph "Routing Structure"
-        ROOT["/"] --> LOGIN["/login"]
-        ROOT --> PROTECTED[ProtectedRoute]
-        PROTECTED --> DASH["/dashboard"]
+        LOGIN["/login"] 
+        ROOT["/"] --> REDIRECT["Navigate to /dashboard"]
+        PROTECTED[ProtectedRoute] --> DASH["/dashboard"]
         PROTECTED --> AUTO["/automations"]
-        PROTECTED --> EXEC["/execution"]
-        PROTECTED --> LOGS["/logs"]
-        PROTECTED --> ADMIN["/admin"]
+        PROTECTED --> EXEC["/execution/:id"]
+        NOTFOUND["*"] --> NF[NotFound Component]
+    end
+    
+    subgraph "Route Protection"
+        DASH --> Dashboard
+        AUTO --> Automations
+        EXEC --> Execution
+        ROOT --> REDIRECT
     end
 ```
+
+**Páginas Implementadas:**
+- **Login.tsx**: Tela de autenticação com credenciais AWX
+- **Dashboard.tsx**: Métricas, estatísticas e visão geral das execuções
+- **Automations.tsx**: Lista e execução de job templates
+- **Execution.tsx**: Detalhes de execução específica (rota com parâmetro :id)
+- **NotFound.tsx**: Página 404 para rotas não encontradas
 
 **Responsabilidades:**
 - Renderização de interfaces
 - Gerenciamento de estado local (formulários, modais)
 - Orquestração de hooks e contexts
-- Navegação entre rotas
+- Navegação entre rotas protegidas
 
 ### 2. Components Layer
 Componentes reutilizáveis e especializados.
@@ -200,7 +213,45 @@ sequenceDiagram
     UI->>UI: Re-render
 ```
 
-## 🗂️ Estrutura de Diretórios
+## �️ Sistema de Roteamento
+
+### Estrutura Real das Rotas
+```typescript
+// src/App.tsx - Configuração atual das rotas
+<Routes>
+  <Route path="/login" element={<Login />} />
+  
+  {/* Rota raiz redireciona para dashboard */}
+  <Route path="/" element={
+    <ProtectedRoute>
+      <Navigate to="/dashboard" replace />
+    </ProtectedRoute>
+  } />
+  
+  {/* Rotas protegidas */}
+  <Route path="/dashboard" element={
+    <ProtectedRoute><Dashboard /></ProtectedRoute>
+  } />
+  
+  <Route path="/automations" element={
+    <ProtectedRoute><Automations /></ProtectedRoute>
+  } />
+  
+  <Route path="/execution/:id" element={
+    <ProtectedRoute><Execution /></ProtectedRoute>
+  } />
+  
+  {/* Catch-all para 404 */}
+  <Route path="*" element={<NotFound />} />
+</Routes>
+```
+
+### Proteção de Rotas
+- **ProtectedRoute**: Verifica autenticação antes de renderizar
+- **Navigate**: Redireciona usuários autenticados de "/" para "/dashboard"
+- **404 Handler**: Captura todas as rotas não encontradas
+
+## �🗂️ Estrutura de Diretórios
 
 ```
 src/
@@ -209,7 +260,7 @@ src/
 │   └── *.tsx           # Componentes de negócio
 ├── contexts/           # Context providers
 ├── hooks/              # Custom hooks
-├── pages/              # Componentes de página
+├── pages/              # Componentes de página (5 páginas)
 ├── services/           # Camada de serviços
 ├── lib/                # Utilitários e helpers
 ├── config/             # Configurações
