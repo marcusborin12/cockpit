@@ -213,7 +213,7 @@ sequenceDiagram
     UI->>UI: Re-render
 ```
 
-## �️ Sistema de Roteamento
+## 🛡️ Sistema de Roteamento
 
 ### Estrutura Real das Rotas
 ```typescript
@@ -251,7 +251,7 @@ sequenceDiagram
 - **Navigate**: Redireciona usuários autenticados de "/" para "/dashboard"
 - **404 Handler**: Captura todas as rotas não encontradas
 
-## �🗂️ Estrutura de Diretórios
+## 🗂️ Estrutura de Diretórios
 
 ```
 src/
