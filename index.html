@@ -11,8 +11,22 @@
   </head>
 
   <body>
-    <!-- Carrega configuração runtime injetada pelo Docker -->
-    <script src="/runtime-config.js"></script>
+    <!-- Configuração runtime para desenvolvimento e produção -->
+    <script>
+      // Define configuração padrão vazia
+      window.__RUNTIME_CONFIG__ = {};
+      
+      // Tenta carregar runtime-config.js apenas se estivermos em produção
+      // (detecta se não é localhost/desenvolvimento)
+      if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+        const script = document.createElement('script');
+        script.src = '/runtime-config.js';
+        script.onerror = () => {
+          console.log('ℹ️ Runtime config not found - using defaults');
+        };
+        document.head.appendChild(script);
+      }
+    </script>
     
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
