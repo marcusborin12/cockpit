@@ -15,9 +15,12 @@ spec:
         app: cockpit-awx
     spec:
       containers:
-      - name: cockpit-awx
-        image: cockpit-awx:latest
+      - name: cockpit-app
+        image: cockpit-app:1.0.3
         imagePullPolicy: Never
+        envFrom:
+        - configMapRef:
+            name: cockpit-config
         ports:
         - containerPort: 8080
         resources:
