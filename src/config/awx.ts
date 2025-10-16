@@ -1,9 +1,26 @@
+// Função para obter variáveis de ambiente do runtime ou build-time
+const getRuntimeConfig = () => {
+  // Verifica se existe configuração injetada no runtime pelo nginx
+  const runtimeConfig = (window as any).__RUNTIME_CONFIG__;
+  return runtimeConfig || {};
+};
+
+// Função para obter valor de configuração com fallback
+const getConfigValue = (key: string, defaultValue?: string): string => {
+  const runtimeConfig = getRuntimeConfig();
+  
+  // Prioridade: Runtime > Build-time > Default
+  return runtimeConfig[key] || 
+         import.meta.env[key] || 
+         defaultValue || '';
+};
+
 // Configuração para integração (simplificada)
 export const AWX_CONFIG = {
   // URL base (usa proxy em desenvolvimento, URL completa em produção)
   BASE_URL: import.meta.env.DEV 
     ? '/api' 
-    : `${import.meta.env.VITE_AWX_API}/api/v2`,
+    : `${getConfigValue('VITE_AWX_API')}/api/v2`,
   
   // Timeout para requisições (em milissegundos)
   TIMEOUT: 30000,

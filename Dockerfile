@@ -1,37 +1,40 @@
-# Etapa 1: build
+# Build stage
 FROM node:20-alpine AS build
 
-# Instala dependências básicas do Node e do Vite
 RUN apk add --no-cache bash git
 
 WORKDIR /app
 
-# Copia apenas os arquivos de dependência para cache do npm
+# Copia arquivos de dependência
 COPY package.json package-lock.json ./
-
-# Instala dependências
 RUN npm ci
 
-# Copia todo o código fonte para o container
+# Copia código fonte
 COPY . .
 
-# Garante que o Vite use o diretório correto para alias
-ENV NODE_PATH=/app/src
-
-# Build do projeto
+# Build usando apenas variáveis padrão do .env
 RUN npm run build
 
-# Etapa 2: nginx
+# Production stage
 FROM nginx:1.27-alpine
 
-# Limpa diretório padrão
-RUN rm -rf /usr/share/nginx/html/*
+# Instalar gettext para substituição de variáveis
+RUN apk add --no-cache gettext
 
 # Copia build do Vite
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copia configuração customizada do Nginx
+# Copia configuração do Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# Cria diretório para scripts de inicialização
+RUN mkdir -p /docker-entrypoint.d
+
+# Copiar script de injeção de runtime config
+COPY inject-runtime-config.sh /docker-entrypoint.d/20-inject-runtime-config.sh
+
+# Tornar o script executável
+RUN chmod +x /docker-entrypoint.d/20-inject-runtime-config.sh
+
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

@@ -151,6 +151,9 @@ class AWXService {
       const url = buildAwxUrl('/me/');
       
       console.log('🔐 Tentativa de login para usuário:', username);
+      console.log('🔗 URL de login:', url);
+      console.log('🌐 Modo:', import.meta.env.DEV ? 'desenvolvimento' : 'produção');
+      console.log('⚙️ Base URL configurada:', import.meta.env.VITE_AWX_API);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -170,6 +173,11 @@ class AWXService {
         const errorText = await response.text().catch(() => 'No response body');
         console.error('❌ Login Error:', { url, status: response.status, errorText });
         
+        // Verifica se a resposta é HTML (redirecionamento ou erro de proxy)
+        if (errorText.includes('<!doctype') || errorText.includes('<html')) {
+          throw new Error('Erro de conexão: A resposta da API retornou HTML em vez de JSON. Verifique se o servidor AWX está acessível e se o proxy está configurado corretamente.');
+        }
+        
         if (response.status === 401) {
           throw new Error('Credenciais inválidas. Verifique seu usuário e senha.');
         } else if (response.status === 403) {
@@ -179,7 +187,19 @@ class AWXService {
         }
       }
 
-      const responseData = await response.json();
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (jsonError) {
+        const responseText = await response.text().catch(() => 'Unable to read response');
+        console.error('❌ Erro ao fazer parse do JSON da resposta:', { responseText, jsonError });
+        
+        if (responseText.includes('<!doctype') || responseText.includes('<html')) {
+          throw new Error('Servidor retornou HTML em vez de JSON. Verifique se a URL da API está correta e se o AWX está funcionando.');
+        }
+        
+        throw new Error('Resposta da API não é um JSON válido. Verifique a configuração do servidor.');
+      }
       console.log('✅ Login Response Data:', responseData);
       
       // A API /api/v2/me retorna uma estrutura paginada com results[]
