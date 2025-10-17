@@ -1,22 +1,26 @@
 /// <reference types="vitest" />
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  // Carrega variáveis de ambiente
-  // Para testes, usa .env.test além do .env padrão
-  const env = loadEnv(mode, process.cwd(), '');
+export default defineConfig(() => {
+  // Não carrega automaticamente arquivos .env
+  // Usa apenas variáveis de ambiente do sistema ou runtime config
+
+  // Para proxy, usa variável de ambiente do sistema se disponível
+  const awxApiUrl = process.env.VITE_AWX_API || 'http://192.168.15.52:8080';
 
   return {
+    // Define diretório inexistente para desabilitar carregamento de .env
+    envDir: './env-disabled',
+    
     server: {
       host: "::",
       port: 8080,
       proxy: {
         '/api': {
-          target: env.VITE_AWX_API || 'http://localhost:8080',
+          target: awxApiUrl,
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, '/api/v2'),

@@ -1,16 +1,18 @@
-// Função para obter variáveis de ambiente do runtime ou build-time
+// Função para obter variáveis de ambiente do runtime ou sistema
 const getRuntimeConfig = () => {
   // Verifica se existe configuração injetada no runtime pelo nginx
   const runtimeConfig = (window as any).__RUNTIME_CONFIG__;
   return runtimeConfig || {};
 };
 
-// Função para obter valor de configuração com fallback
+// Função para obter valor de configuração com prioridade para variáveis do sistema
 const getConfigValue = (key: string, defaultValue?: string): string => {
   const runtimeConfig = getRuntimeConfig();
   
-  // Prioridade: Runtime > Build-time > Default
+  // Prioridade: Runtime > Sistema (process.env) > Build-time (import.meta.env) > Default
+  // Nota: Em produção, process.env não está disponível no browser, então usa runtime config
   return runtimeConfig[key] || 
+         (typeof process !== 'undefined' && process.env ? process.env[key] : undefined) ||
          import.meta.env[key] || 
          defaultValue || '';
 };

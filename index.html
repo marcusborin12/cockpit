@@ -11,6 +11,32 @@
   </head>
 
   <body>
+    <!-- Interceptador de erros de extensões antes da aplicação carregar -->
+    <script>
+      // Intercepta erros de extensões do navegador ANTES da aplicação React carregar
+      const originalConsoleError = console.error;
+      console.error = function(...args) {
+        const message = args.join(' ');
+        
+        // Lista de padrões de erro para suprimir
+        const suppressPatterns = [
+          /Unchecked runtime\.lastError/i,
+          /listener indicated an asynchronous response by returning true/i,
+          /message channel closed before a response was received/i,
+          /runtime\.lastError/i,
+          /Extension context invalidated/i,
+          /chrome-extension:/i,
+          /moz-extension:/i
+        ];
+        
+        // Se o erro corresponde a algum padrão, não exibe
+        const shouldSuppress = suppressPatterns.some(pattern => pattern.test(message));
+        if (!shouldSuppress) {
+          originalConsoleError.apply(console, args);
+        }
+      };
+    </script>
+    
     <!-- Configuração runtime para desenvolvimento e produção -->
     <script>
       // Define configuração padrão vazia

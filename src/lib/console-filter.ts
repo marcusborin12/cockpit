@@ -3,6 +3,17 @@
  * Especialmente útil para filtrar erros de extensões do navegador
  */
 
+// Tipagem para Chrome API (se disponível)
+declare global {
+  interface Window {
+    chrome?: {
+      runtime?: {
+        lastError?: { message: string };
+      };
+    };
+  }
+}
+
 // Lista de padrões de erro que devem ser filtrados
 const ERROR_PATTERNS_TO_SUPPRESS = [
   /runtime\.lastError/i,
@@ -10,6 +21,13 @@ const ERROR_PATTERNS_TO_SUPPRESS = [
   /listener indicated an asynchronous response/i,
   /Extension context invalidated/i,
   /The message port closed before a response was received/i,
+  /Unchecked runtime\.lastError/i,
+  /A listener indicated an asynchronous response by returning true/i,
+  /but the message channel closed before a response was received/i,
+  // Padrões para erros de extensões específicas
+  /chrome-extension:\/\//i,
+  /moz-extension:\/\//i,
+  /extension\//i,
 ];
 
 // Backup das funções originais do console
@@ -56,6 +74,7 @@ export function uninstallConsoleFilters() {
  * Intercepta erros globais não tratados para filtrar erros de extensão
  */
 export function installGlobalErrorHandler() {
+  // Intercepta erros de JavaScript
   window.addEventListener('error', (event) => {
     if (shouldSuppressMessage(event.message)) {
       event.preventDefault();
@@ -63,6 +82,7 @@ export function installGlobalErrorHandler() {
     }
   });
 
+  // Intercepta promises rejeitadas
   window.addEventListener('unhandledrejection', (event) => {
     const message = event.reason?.message || event.reason?.toString() || '';
     if (shouldSuppressMessage(message)) {
@@ -70,4 +90,29 @@ export function installGlobalErrorHandler() {
       return false;
     }
   });
+
+  // Intercepta erros específicos do Chrome runtime
+  if (typeof (window as any).chrome !== 'undefined' && (window as any).chrome.runtime) {
+    const chrome = (window as any).chrome;
+    const originalGetLastError = chrome.runtime.lastError;
+    Object.defineProperty(chrome.runtime, 'lastError', {
+      get: function() {
+        const error = originalGetLastError;
+        if (error && shouldSuppressMessage(error.message || '')) {
+          return undefined; // Suprime o erro
+        }
+        return error;
+      },
+      configurable: true
+    });
+  }
+
+  // Intercepta erros do console que aparecem diretamente no DevTools
+  const originalConsoleDir = console.dir;
+  console.dir = (...args: any[]) => {
+    const message = args.join(' ');
+    if (!shouldSuppressMessage(message)) {
+      originalConsoleDir.apply(console, args);
+    }
+  };
 }
