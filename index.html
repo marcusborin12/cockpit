@@ -11,6 +11,49 @@
   </head>
 
   <body>
+    <!-- Supressor de erros de extensões do navegador -->
+    <script>
+      // Suprime erros de extensões do navegador que não afetam a aplicação
+      const originalError = console.error;
+      console.error = function(...args) {
+        const message = args.join(' ');
+        if (message.includes('runtime.lastError') || 
+            message.includes('message channel closed') ||
+            message.includes('listener indicated an asynchronous response') ||
+            message.includes('Unchecked runtime.lastError')) {
+          return; // Ignora esses erros
+        }
+        originalError.apply(console, args);
+      };
+
+      // Suprime erros globais de extensões
+      window.addEventListener('error', function(event) {
+        if (event.message && (
+          event.message.includes('runtime.lastError') ||
+          event.message.includes('message channel closed') ||
+          event.message.includes('listener indicated an asynchronous response') ||
+          event.message.includes('Unchecked runtime.lastError')
+        )) {
+          event.preventDefault();
+          return false;
+        }
+      });
+
+      // Intercepta especificamente o Chrome runtime.lastError
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        const originalLastError = Object.getOwnPropertyDescriptor(chrome.runtime, 'lastError');
+        if (originalLastError) {
+          Object.defineProperty(chrome.runtime, 'lastError', {
+            get: function() {
+              // Retorna null em vez do erro para evitar que apareça no console
+              return null;
+            },
+            configurable: true
+          });
+        }
+      }
+    </script>
+    
     <!-- Configuração runtime para desenvolvimento e produção -->
     <script>
       // Define configuração padrão vazia
